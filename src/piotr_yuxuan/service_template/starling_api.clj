@@ -12,9 +12,9 @@
   [request]
   (safely (http/request (assoc request :throw-exceptions false))
     :on-error
+    :circuit-breaker ::api
     :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-    :max-retries 5
-    :circuit-breaker ::api))
+    :max-retries 5))
 
 (def GetAccountResponse
   (m/schema
