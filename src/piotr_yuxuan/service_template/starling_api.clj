@@ -125,3 +125,13 @@
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       CreateOrUpdateSavingsGoalResponseV2-decoder))
 
+(defn delete-a-savings-goal
+  [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
+  (-> {:method :delete
+       :url (str/join "/" [api-base "account" account-uid "savings-goals" savings-goal-uid])
+       :headers {"accept" "application/json"
+                 "content-type" "application/json"
+                 "authorization" (str "Bearer " token)}}
+      request->response
+      :body
+      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)))
