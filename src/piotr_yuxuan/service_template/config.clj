@@ -25,7 +25,7 @@
                              :env-var "DB_PASSWORD"
                              :secret true}]]
     [::db/migrate? [boolean? {:default false, :long-option "--db-migrate"}]]
-    [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api/v2"}]]]))
+    [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api"}]]]))
 
 (defn load-config
   [args]

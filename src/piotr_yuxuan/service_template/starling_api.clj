@@ -34,7 +34,7 @@
   [{::keys [api-base]} {:keys [token]}]
   (-> (request->response
        {:method :get
-        :url (str/join "/" [api-base "accounts"])
+        :url (str/join "/" [api-base "v2/accounts"])
         :headers {"accept" "application/json"
                   "authorization" (str "Bearer " token)}})
       :body
@@ -55,7 +55,7 @@
 (defn get-feed-transactions-between
   [{::keys [api-base]} {:keys [token account-uid category-uid min-timestamp max-timestamp]}]
   (-> {:method :get
-       :url (str/join "/" [api-base "feed/account" account-uid "category" category-uid "transactions-between"])
+       :url (str/join "/" [api-base "v2/feed/account" account-uid "category" category-uid "transactions-between"])
        :headers {"accept" "application/json"
                  "authorization" (str "Bearer " token)}
        :query-params {"minTransactionTimestamp" (m/encode inst? min-timestamp mt/json-transformer)
@@ -79,7 +79,7 @@
 (defn get-all-savings-goals
   [{::keys [api-base]} {:keys [token account-uid]}]
   (-> {:method :get
-       :url (str/join "/" [api-base "account" account-uid "savings-goals"])
+       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
        :headers {"accept" "application/json"
                  "authorization" (str "Bearer " token)}}
       request->response
@@ -113,7 +113,7 @@
 (defn put-create-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid]}]
   (-> {:method :put
-       :url (str/join "/" [api-base "account" account-uid "savings-goals"])
+       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
        :headers {"accept" "application/json"
                  "content-type" "application/json"
                  "authorization" (str "Bearer " token)}
@@ -128,7 +128,7 @@
 (defn delete-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
   (-> {:method :delete
-       :url (str/join "/" [api-base "account" account-uid "savings-goals" savings-goal-uid])
+       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
        :headers {"accept" "application/json"
                  "content-type" "application/json"
                  "authorization" (str "Bearer " token)}}
@@ -144,7 +144,7 @@
 (defn get-one-savings-goal
   [[{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]]
   (-> {:method :get
-       :url (str/join "/" [api-base "account" account-uid "savings-goals" savings-goal-uid])
+       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
        :headers {"accept" "application/json"
                  "authorization" (str "Bearer " token)}}
       request->response
@@ -166,7 +166,7 @@
 (defn get-confirmation-of-funds
   [[{::keys [api-base]} {:keys [token account-uid target-amount]}]]
   (-> {:method :get
-       :url (str/join "/" [api-base "accounts" account-uid "confirmation-of-funds"])
+       :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
        :headers {"accept" "application/json"
                  "authorization" (str "Bearer " token)}
        :query-params {"targetAmountInMinorUnits" (m/encode int? target-amount mt/json-transformer)}}
@@ -201,7 +201,7 @@
 (defn put-add-money-to-saving-goal
   [[{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]]
   (-> {:method :put
-       :url (str/join "/" [api-base "account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
+       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
        :headers {"accept" "application/json"
                  "authorization" (str "Bearer " token)
                  "content-type" "application/json"}
