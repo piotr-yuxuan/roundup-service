@@ -2,6 +2,7 @@
   (:require
    [migratus.core :as migratus]
    [next.jdbc :as jdbc]
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
    [next.jdbc.connection :as connection])
   (:import
    (com.zaxxer.hikari HikariDataSource)))
@@ -33,6 +34,7 @@
 
 (defn start
   [config]
-  (-> config
-      (assoc ::datasource (->connection-pool config))
-      (doto migrate)))
+  (closeable-map*
+   (-> config
+       (assoc ::datasource (->connection-pool config))
+       (doto migrate))))
