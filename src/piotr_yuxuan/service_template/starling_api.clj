@@ -87,3 +87,41 @@
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       SavingsGoalsV2-body-decoder))
 
+(def PutCreateASavingsGoalRequestBody
+  (m/schema
+   [:map {:closed true}
+    [:name [:string {:min 1}]]
+    [:currency entity/Currency]]))
+
+(def PutCreateASavingsGoalRequestBody-encoder
+  (comp jsonista.core/write-value-as-string
+        (m/encoder PutCreateASavingsGoalRequestBody (mt/transformer
+                                                     mt/strip-extra-keys-transformer
+                                                     mt/json-transformer))))
+
+(def CreateOrUpdateSavingsGoalResponseV2
+  (m/schema
+   [:map {:closed true}
+    [:savingsGoalUid uuid?]
+    [:success boolean?]]))
+
+(def CreateOrUpdateSavingsGoalResponseV2-decoder
+  (m/decoder CreateOrUpdateSavingsGoalResponseV2 (mt/transformer
+                                                  mt/strip-extra-keys-transformer
+                                                  mt/json-transformer)))
+
+(defn put-create-a-savings-goal
+  [{::keys [api-base]} {:keys [token account-uid]}]
+  (-> {:method :put
+       :url (str/join "/" [api-base "account" account-uid "savings-goals"])
+       :headers {"accept" "application/json"
+                 "content-type" "application/json"
+                 "authorization" (str "Bearer " token)}
+       :body (PutCreateASavingsGoalRequestBody-encoder
+              {:name "Round it up!"
+               :currency "GBP"})}
+      request->response
+      :body
+      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
+      CreateOrUpdateSavingsGoalResponseV2-decoder))
+
