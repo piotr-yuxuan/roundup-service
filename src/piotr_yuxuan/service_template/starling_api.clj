@@ -40,3 +40,27 @@
       :body
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       GetAccountResponse-body-decoder))
+
+(def GetFeedTransactionsBetween
+  (m/schema
+   [:map {:closed true}
+    [:feedItems
+     [:sequential entity/FeedItem]]]))
+
+(def GetFeedTransactionsBetween-body-decoder
+  (m/decoder GetFeedTransactionsBetween (mt/transformer
+                                         mt/strip-extra-keys-transformer
+                                         mt/json-transformer)))
+
+(defn get-feed-transactions-between
+  [{::keys [api-base]} {:keys [token account-uid category-uid min-timestamp max-timestamp]}]
+  (-> {:method :get
+       :url (str/join "/" [api-base "feed/account" account-uid "category" category-uid "transactions-between"])
+       :headers {"accept" "application/json"
+                 "authorization" (str "Bearer " token)}
+       :query-params {"minTransactionTimestamp" (m/encode inst? min-timestamp mt/json-transformer)
+                      "maxTransactionTimestamp" (m/encode inst? max-timestamp mt/json-transformer)}}
+      request->response
+      :body
+      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
+      GetFeedTransactionsBetween-body-decoder))
