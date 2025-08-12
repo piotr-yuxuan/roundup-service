@@ -175,3 +175,39 @@
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       ConfirmationOfFundsResponse-body-decoder))
 
+(def TopUpRequestV2
+  (m/schema
+   [:map {:closed true}
+    [:amount entity/CurrencyAndAmount]
+    [:reference {:optional true} [:string {:max 100}]]]))
+
+(def TopUpRequestV2-encoder
+  (comp jsonista.core/write-value-as-string
+        (m/encoder TopUpRequestV2 (mt/transformer
+                                   mt/strip-extra-keys-transformer
+                                   mt/json-transformer))))
+
+(def SavingsGoalTransferResponseV2
+  (m/schema
+   [:map {:closed true}
+    [:transferUid uuid?]
+    [:success boolean?]]))
+
+(def SavingsGoalTransferResponseV2-body-decoder
+  (m/decoder SavingsGoalTransferResponseV2 (mt/transformer
+                                            mt/strip-extra-keys-transformer
+                                            mt/json-transformer)))
+
+(defn put-add-money-to-saving-goal
+  [[{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]]
+  (-> {:method :put
+       :url (str/join "/" [api-base "account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
+       :headers {"accept" "application/json"
+                 "authorization" (str "Bearer " token)
+                 "content-type" "application/json"}
+       :body (TopUpRequestV2-encoder {:amount amount})}
+      request->response
+      :body
+      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
+      SavingsGoalTransferResponseV2-body-decoder))
+
