@@ -14,6 +14,7 @@
    [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
+   [ring.middleware.authorization :as authorization]
    [reitit.ring.middleware.dev :as dev]
    [ring.middleware.reload :as reload]
    [reitit.swagger :as swagger]
@@ -25,18 +26,6 @@
 (defmethod close! Server
   [x]
   (.stop ^Server x))
-
-(defonce debug (atom nil))
-(defn secret-handler
-  [request]
-  (reset! debug request)
-  (println "in the handler44")
-  ;; In a real app authentication would be handled by middleware
-  (if (get-in request [:headers "authorization"])
-    {:status 200
-     :body {:secret "I am a weasel"}}
-    {:status 401
-     :body {:error "1235"}}))
 
 (defn routes
   [config]
@@ -93,7 +82,8 @@
                         ;; coercing request parameters
                         coercion/coerce-request-middleware
                         ;; multipart
-                        multipart/multipart-middleware]}}))
+                        multipart/multipart-middleware
+                        authorization/wrap-authorization]}}))
 
 (defn ->handler
   [config]
