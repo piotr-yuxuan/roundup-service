@@ -1,4 +1,5 @@
 (ns piotr-yuxuan.service-template.entity
+  "Only keep the attributes that are interesting to us."
   (:require [malli.core :as m]))
 
 (def Currency
