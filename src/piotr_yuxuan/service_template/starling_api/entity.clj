@@ -1,4 +1,4 @@
-(ns piotr-yuxuan.service-template.entity
+(ns piotr-yuxuan.service-template.starling-api.entity
   "Only keep the attributes that are interesting to us."
   (:require [malli.core :as m]))
 

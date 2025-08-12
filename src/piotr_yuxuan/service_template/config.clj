@@ -3,7 +3,7 @@
    [malli.core :as m]
    [piotr-yuxuan.malli-cli :as malli-cli]
    [piotr-yuxuan.service-template.db :as db]
-   [piotr-yuxuan.service-template.starling-api :as starling-api]))
+   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
 
 (def Config
   (m/schema
