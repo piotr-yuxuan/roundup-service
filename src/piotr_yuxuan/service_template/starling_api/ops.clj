@@ -38,7 +38,8 @@
                   "authorization" (str "Bearer " token)}})
       :body
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
-      GetAccountResponse-body-decoder))
+      GetAccountResponse-body-decoder
+      :accounts))
 
 (def GetFeedTransactionsBetween
   (m/schema
@@ -62,7 +63,8 @@
       request->response
       :body
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
-      GetFeedTransactionsBetween-body-decoder))
+      GetFeedTransactionsBetween-body-decoder
+      :feedItems))
 
 (def SavingsGoalsV2
   (m/schema
@@ -84,7 +86,8 @@
       request->response
       :body
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
-      SavingsGoalsV2-body-decoder))
+      SavingsGoalsV2-body-decoder
+      :savingsGoalList))
 
 (def PutCreateASavingsGoalRequestBody
   (m/schema
@@ -141,7 +144,7 @@
                                    mt/json-transformer)))
 
 (defn get-one-savings-goal
-  [[{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]]
+  [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
   (-> {:method :get
        :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
        :headers {"accept" "application/json"
@@ -163,7 +166,7 @@
                                           mt/json-transformer)))
 
 (defn get-confirmation-of-funds
-  [[{::keys [api-base]} {:keys [token account-uid target-amount]}]]
+  [{::keys [api-base]} {:keys [token account-uid target-amount]}]
   (-> {:method :get
        :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
        :headers {"accept" "application/json"
@@ -198,7 +201,7 @@
                                             mt/json-transformer)))
 
 (defn put-add-money-to-saving-goal
-  [[{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]]
+  [{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]
   (-> {:method :put
        :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
        :headers {"accept" "application/json"
