@@ -26,13 +26,15 @@
      [:sequential entity/Account]]]))
 
 (def GetAccountResponse-body-decoder
-  (m/decoder GetAccountResponse mt/json-transformer))
+  (m/decoder GetAccountResponse (mt/transformer
+                                 mt/strip-extra-keys-transformer
+                                 mt/json-transformer)))
 
 (defn get-accounts
-  [{:keys [token]}]
+  [{::keys [api-base]} {:keys [token]}]
   (-> (request->response
        {:method :get
-        :url "https://api-sandbox.starlingbank.com/api/v2/accounts"
+        :url (str/join "/" [api-base "accounts"])
         :headers {"accept" "application/json"
                   "authorization" (str "Bearer " token)}})
       :body
