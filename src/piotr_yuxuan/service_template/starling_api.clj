@@ -152,3 +152,26 @@
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       SavingsGoalV2-body-decoder))
 
+(def ConfirmationOfFundsResponse
+  (m/schema
+   [:map {:closed true}
+    [:requestedAmountAvailableToSpend boolean?]
+    [:accountWouldBeInOverdraftIfRequestedAmountSpent boolean?]]))
+
+(def ConfirmationOfFundsResponse-body-decoder
+  (m/decoder ConfirmationOfFundsResponse (mt/transformer
+                                          mt/strip-extra-keys-transformer
+                                          mt/json-transformer)))
+
+(defn get-confirmation-of-funds
+  [[{::keys [api-base]} {:keys [token account-uid target-amount]}]]
+  (-> {:method :get
+       :url (str/join "/" [api-base "accounts" account-uid "confirmation-of-funds"])
+       :headers {"accept" "application/json"
+                 "authorization" (str "Bearer " token)}
+       :query-params {"targetAmountInMinorUnits" (m/encode int? target-amount mt/json-transformer)}}
+      request->response
+      :body
+      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
+      ConfirmationOfFundsResponse-body-decoder))
+
