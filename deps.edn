@@ -4,6 +4,7 @@
         ring/ring {:mvn/version "1.14.2"}
         metosin/ring-swagger-ui {:mvn/version "5.20.0"}
         com.brunobonacci/safely {:mvn/version "1.0.0"}
+        org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"}
         metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]}
         com.brunobonacci/mulog {:mvn/version "0.9.0"}
         com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"}

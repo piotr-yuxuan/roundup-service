@@ -6,7 +6,8 @@
    [piotr-yuxuan.malli-cli :as malli-cli]
    [piotr-yuxuan.service-template.api :as api]
    [piotr-yuxuan.service-template.config :as config :refer [Config]]
-   [piotr-yuxuan.service-template.db :as db])
+   [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.starling-api :as starling-api])
   (:gen-class))
 
 (defn start
@@ -14,6 +15,7 @@
   (closeable-map*
    (-> config
        db/start
+       starling-api/start
        api/start)))
 
 (defn -main

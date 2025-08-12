@@ -1,6 +1,7 @@
 (ns piotr-yuxuan.service-template.starling-api
   (:require
    [clj-http.client :as http]
+   [piotr-yuxuan.service-template.openapi-spec :as openapi-spec]
    [clojure.string :as str]
    [jsonista.core :as j]
    [malli.core :as m]
@@ -211,3 +212,17 @@
       (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       SavingsGoalTransferResponseV2-body-decoder))
 
+(def api-reference-version
+  "This is hard-coded because the code above and test have been
+  developped against this version. Don't change it unless it breaks."
+  "starling-openapi-1.0.0.json")
+
+(defn start
+  [{::keys [api-base] :as config}]
+  (let [diff (openapi-spec/diff api-reference-version (str/join "/" [api-base "openapi.json"]))]
+    (when-not (openapi-spec/compatible? diff)
+      (let [incompatible-changes (openapi-spec/changes diff)]
+        (println incompatible-changes)
+        (throw (ex-info "The current version API is incompatible with the reference version, can't start."
+                        {:incompatible-changes incompatible-changes})))))
+  config)
