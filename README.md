@@ -92,7 +92,7 @@ From a repl you may create a new migration with:
 
 ### Grafana (dashboard visualisation)
 
-- Browser URL: http://localhost:3000
+- Browser URL: http://localhost:3001
 
 Grafana visualises the metrics collected by Prometheus with dashboards
 configured for PostgreSQL. Anonymous login is enabled with Admin

@@ -58,7 +58,7 @@ services:
       - ./dev-resources/grafana/provisioning/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
       - ./dev-resources/grafana/provisioning/dashboards:/var/lib/grafana/dashboards
     ports:
-      - 3000:3000
+      - 3001:3000
     depends_on:
       - prometheus
     restart: unless-stopped
