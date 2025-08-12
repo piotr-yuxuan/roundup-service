@@ -2,7 +2,8 @@
   (:require
    [malli.core :as m]
    [piotr-yuxuan.malli-cli :as malli-cli]
-   [piotr-yuxuan.service-template.db :as db]))
+   [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.starling-api :as starling-api]))
 
 (def Config
   (m/schema
@@ -23,7 +24,8 @@
     [::db/password [:string {:default "password"
                              :env-var "DB_PASSWORD"
                              :secret true}]]
-    [::db/migrate? [boolean? {:default false, :long-option "--db-migrate"}]]]))
+    [::db/migrate? [boolean? {:default false, :long-option "--db-migrate"}]]
+    [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api/v2"}]]]))
 
 (defn load-config
   [args]
