@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18beta2
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database
+    ports:
+      - "5432:5432"
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    volumes:
+      - ./dev-resources/pg_data:/var/lib/postgresql/18/data
+      - ./dev-resources/initdb:/docker-entrypoint-initdb.d
+      - ./dev-resources/postgresql.conf:/etc/postgresql/postgresql.conf
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 5431:8080
+
+  postgres_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    container_name: postgres_exporter
+    environment:
+      DATA_SOURCE_URI: "postgres:5432/database?sslmode=disable"
+      DATA_SOURCE_USER: user
+      DATA_SOURCE_PASS: password
+    ports:
+      - 9187:9187
+    depends_on:
+      - postgres
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./dev-resources/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./dev-resources/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./dev-resources/grafana/provisioning/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./dev-resources/grafana/provisioning/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+
+networks:
+  default:
+    name: service-template_default
+    driver: bridge
