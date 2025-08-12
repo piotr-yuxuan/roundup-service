@@ -36,3 +36,10 @@
     [:retryAllocationUntilTime inst?]
     [:status [:enum "UPCOMING" "UPCOMING_CANCELLED" "PENDING", "REVERSED", "SETTLED", "DECLINED", "REFUNDED", "RETRYING", "ACCOUNT_CHECK"]]]))
 
+(def SavingsGoalV2
+  (m/schema
+   [:map {:closed true}
+    [:savingsGoalUid uuid?]
+    [:name string?]
+    [:totalSaved CurrencyAndAmount]
+    [:state [:enum "CREATING" "ACTIVE" "ARCHIVING" "ARCHIVED" "RESTORING" "PENDING"]]]))
