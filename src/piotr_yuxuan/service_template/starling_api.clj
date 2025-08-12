@@ -1,12 +1,15 @@
 (ns piotr-yuxuan.service-template.starling-api
   (:require
    [clj-http.client :as http]
+   [clojure.string :as str]
    [jsonista.core :as j]
    [malli.core :as m]
    [malli.transform :as mt]
    [piotr-yuxuan.service-template.entity :as entity]
    [reitit.ring.malli]
-   [safely.core :refer [safely]]))
+   [safely.core :refer [safely]])
+  (:import
+   (java.util UUID)))
 
 (defn request->response
   [request]
