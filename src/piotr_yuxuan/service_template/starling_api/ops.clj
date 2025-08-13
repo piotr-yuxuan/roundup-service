@@ -23,15 +23,15 @@
     (bind (st.http/request->response auth-schema->
                                      get-accounts-schema<-
                                      request)
-          (comp ok :body))))
+          (comp ok :accounts :body))))
 
 (def get-feed-transactions-between-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
              [:query-params
               [:map
-               ["minTransactionTimestamp" inst?]
-               ["maxTransactionTimestamp" inst?]]]]))
+               [:minTransactionTimestamp inst?]
+               [:maxTransactionTimestamp inst?]]]]))
 
 (def get-feed-transactions-between-schema<-
   (m/schema [:map [:body [:map [:feedItems [:sequential entity/FeedItem]]]]]))
@@ -44,8 +44,8 @@
                                      "transactions-between"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}
-                 :query-params {"minTransactionTimestamp" min-timestamp
-                                "maxTransactionTimestamp" max-timestamp}}]
+                 :query-params {:minTransactionTimestamp min-timestamp
+                                :maxTransactionTimestamp max-timestamp}}]
     (bind (st.http/request->response get-feed-transactions-between-schema->
                                      get-feed-transactions-between-schema<-
                                      request)

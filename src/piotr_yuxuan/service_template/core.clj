@@ -2,18 +2,14 @@
   (:require
    [malli.core :as m]
    [malli.experimental.time :as met]
-   [malli.experimental.time.transform :as mett]
    [malli.registry :as mr]
-   [malli.transform :as mt]
    [piotr-yuxuan.service-template.railway :refer [bind error ok]]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
    [reitit.ring.malli])
   (:import
-   (java.math BigDecimal RoundingMode)
    (java.time Period Year ZoneId)
-   (java.time.temporal WeekFields)
-   (java.util UUID)
-   (java.util UUID)))
+   (java.time.temporal WeekFields)))
+
 
 (mr/set-default-registry!
  (mr/composite-registry
@@ -67,17 +63,6 @@
     (error {:step :filter-eligible-transactions
             :reason "No eligible transactions"})))
 
-(defn calculate-round-up
-  [{:keys [eligible-txs] :as ctx}]
-  (->> eligible-txs
-       (map (comp (partial round-up-difference 2)
-                  :minorUnits
-                  :amount))
-       (reduce +)
-       (assoc {:currency "GBP"} :minorUnits)
-       (assoc ctx :round-up-amount)
-       ok))
-
 (defn get-savings-goal
   [{:keys [config args] :as ctx}]
   (if-let [savings-goal (->> (starling-api/get-all-savings-goals config args)
@@ -109,10 +94,14 @@
   [config args]
   (-> (ok {:config config
            :args args})
+      (bind (fn [{:keys [config args] :as ctx}]
+              (-> (starling-api/get-accounts config args)
+                  (bind #(assoc ctx :accounts %)))))
       (bind get-primary-account)
       (bind get-feed-transactions)
-      (bind filter-eligible-transactions)
-      (bind calculate-round-up)
-      (bind get-savings-goal)
-      (bind get-confirmation-of-funds)
-      (bind add-money-to-saving-goal)))
+      ;(bind filter-eligible-transactions)
+      ;(bind calculate-round-up)
+      ;(bind get-savings-goal)
+      ;(bind get-confirmation-of-funds)
+      ;(bind add-money-to-saving-goal)
+      ))

@@ -97,14 +97,3 @@ From a repl you may create a new migration with:
 Grafana visualises the metrics collected by Prometheus with dashboards
 configured for PostgreSQL. Anonymous login is enabled with Admin
 rights for ease of access.
-
-## Tasks
-
-- /DB connnection (pool) from Clojure
-- Logging with mulog
-- Tests and watcher
-- Generative testing
-- /Embryo of system and app that can be started.
-- Monitor DB connection pool
-- VisualVM
-- Update dependencies

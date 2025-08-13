@@ -9,10 +9,13 @@
    [piotr-yuxuan.service-template.railway :refer [error ok]]
    [piotr-yuxuan.service-template.starling-api.entity :as entity]
    [piotr-yuxuan.service-template.starling-api.ops :as ops]
-   [ring.util.http-status :as http-status]))
+   [ring.util.http-status :as http-status])
+  (:import
+   (java.time Instant)
+   (java.util UUID)))
 
 (deftest get-accounts-test
-  (testing "happy path"
+  (testing "happy path, one account"
     (let [token (mg/generate [:string {:min 10 :max 15}])
           api-base (mg/generate [:string {:min 10 :max 15}])
           expected-request {:method :get
@@ -24,7 +27,7 @@
                                                  (is (= expected-request request))
                                                  {:status http-status/ok
                                                   :body {:accounts [(m/encode entity/Account expected-account mt/json-transformer)]}})]
-        (is (= (ok {:accounts [expected-account]})
+        (is (= (ok [expected-account])
                (ops/get-accounts
                 {::ops/api-base api-base}
                 {:token token}))))))
@@ -41,3 +44,46 @@
                (ops/get-accounts
                 {::ops/api-base api-base}
                 {:token token})))))))
+
+(deftest get-feed-transactions-between-test
+  ;; (testing "happy path"
+  ;;   )
+
+  (testing "no transactions"
+    (with-redefs [st.http/-request->response (constantly
+                                              {:status http-status/ok
+                                               :body {:feedItems []}})]
+      (is (= (ok [])
+             (ops/get-feed-transactions-between
+              {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+              {:token (mg/generate [:string {:min 10 :max 15}])
+               :account-uid (UUID/randomUUID)
+               :category-uid (UUID/randomUUID)
+               :min-timestamp (Instant/now)
+               :max-timestamp (Instant/now)})))))
+
+  (testing "bad request"
+    (let [reason (rand-nth ["UNKNOWN_ACCOUNT" "UNKNOWN_CATEGORY"])]
+      (with-redefs [st.http/-request->response (constantly {:status http-status/bad-request
+                                                            :body {:errors [{:message reason}]
+                                                                   :success false}})]
+        (is (= (error {:body {:errors [{:message reason}]
+                              :success false}
+                       :status 400})
+               (ops/get-feed-transactions-between
+                {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+                {:token (mg/generate [:string {:min 10 :max 15}])
+                 :account-uid (UUID/randomUUID)
+                 :category-uid (UUID/randomUUID)
+                 :min-timestamp (Instant/now)
+                 :max-timestamp (Instant/now)})))))))
+
+;; (deftest get-all-savings-goals-test)
+
+;; (deftest put-create-a-savings-goal-testt)
+
+;; (deftest get-one-savings-goal-testt)
+
+;; (deftest get-confirmation-of-funds-testt)
+
+;; (deftest put-add-money-to-saving-goal-testt)
