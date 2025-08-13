@@ -33,35 +33,6 @@
                   (.atStartOfDay (ZoneId/systemDefault)))]
     [start (.plus start (Period/ofWeeks 1))]))
 
-(m/encode inst?
-          #inst"2025-08-12T12:45:56.000Z"
-          mt/json-transformer)
-
-(type #inst"2025-08-12T12:45:56.000Z")
-
-(m/encode [:time/zoned-date-time {:pattern "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"}]
-          (first (year+week-number->interval (Year/of 2025) 33))
-          (mt/transformer
-           mett/time-transformer
-           mt/json-transformer))
-
-(defn bankers-rounding
-  "Too bad we just have to round up to the nearest integer above."
-  [^long n]
-  (-> (BigDecimal/valueOf n)
-      (.setScale -2 RoundingMode/HALF_EVEN)
-      (.longValueExact)))
-
-(defn round-up-difference
-  "Returns how much needs to be added to `n` to round it up to the given scale.
-   `scale` is the power of 10 digit to round to (e.g. 2 = hundreds).
-  If `n` is already rounded, returns 0."
-  [scale ^long n]
-  (let [rounded (-> (BigDecimal/valueOf n)
-                    (.setScale (- scale) RoundingMode/CEILING)
-                    (.longValueExact))]
-    (- rounded n)))
-
 (defn get-primary-account
   [{:keys [config args] :as ctx}]
   (let [accounts (starling-api/get-accounts config args)]
