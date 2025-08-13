@@ -21,7 +21,7 @@
    [:map {:closed true}
     ;; Why is this a string in transactions-between, but an enum in Account?
     [:currency Currency]
-    [:minorUnits int?]]))
+    [:minorUnits [:int {:min 0}]]]))
 
 (def FeedItem
   (m/schema
