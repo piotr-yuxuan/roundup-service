@@ -3,12 +3,15 @@
         ring/ring-jetty-adapter {:mvn/version "1.14.2"}
         ring/ring {:mvn/version "1.14.2"}
         metosin/ring-swagger-ui {:mvn/version "5.20.0"}
+        com.brunobonacci/safely {:mvn/version "1.0.0"}
+        org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"}
         metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]}
         com.brunobonacci/mulog {:mvn/version "0.9.0"}
         com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"}
         ;; Do not use slf4j and don't bother about it.
         org.slf4j/slf4j-nop {:mvn/version "2.0.17"}
 
+        clj-http/clj-http {:mvn/version "3.13.1"} ; HTTP client
         metosin/malli {:mvn/version "0.19.1"}
         metosin/ring-http-response {:mvn/version "0.9.5" :exclusions [ring/ring-core]} ; No magic numbers for http statuses
 

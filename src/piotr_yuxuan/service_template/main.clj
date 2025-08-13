@@ -1,4 +1,5 @@
 (ns piotr-yuxuan.service-template.main
+  (:gen-class)
   (:require
    [clojure.pprint :as pprint]
    [malli.core :as m]
@@ -6,14 +7,15 @@
    [piotr-yuxuan.malli-cli :as malli-cli]
    [piotr-yuxuan.service-template.api :as api]
    [piotr-yuxuan.service-template.config :as config :refer [Config]]
-   [piotr-yuxuan.service-template.db :as db])
-  (:gen-class))
+   [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
 
 (defn start
   [config]
   (closeable-map*
    (-> config
        db/start
+       starling-api/start
        api/start)))
 
 (defn -main

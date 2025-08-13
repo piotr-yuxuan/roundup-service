@@ -1,9 +1,8 @@
 (ns piotr-yuxuan.service-template.api
   (:require
-   [clojure.java.io :as io]
    [malli.util :as mu]
    [muuntaja.core :as m]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
@@ -14,29 +13,12 @@
    [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
-   [reitit.ring.middleware.dev :as dev]
-   [ring.middleware.reload :as reload]
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]
-   [ring.adapter.jetty :as jetty])
-  (:import
-   (org.eclipse.jetty.server Server)))
-
-(defmethod close! Server
-  [x]
-  (.stop ^Server x))
-
-(defonce debug (atom nil))
-(defn secret-handler
-  [request]
-  (reset! debug request)
-  (println "in the handler44")
-  ;; In a real app authentication would be handled by middleware
-  (if (get-in request [:headers "authorization"])
-    {:status 200
-     :body {:secret "I am a weasel"}}
-    {:status 401
-     :body {:error "1235"}}))
+   [ring.adapter.jetty :as jetty]
+   [ring.middleware.authorization :as authorization]
+   [ring.middleware.reload :as reload]
+   [ring.util.http-status :as http-status]))
 
 (defn routes
   [config]
@@ -50,12 +32,14 @@
                                                               :bearerFormat "JWT"}}}}
            :handler (openapi/create-openapi-handler)}}]
 
-   ["/api/v0" {:tags #{"Youp"}
+   ["/api/v0" {:tags #{"Trigger round up"}
                :openapi {:security [{"bearer" []}]}}
-    ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for the week starting at midnight (local British time) on the day specified."
+    ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for the week starting Monday midnight."
                                  :responses {200 {:body [:map [:secret :string]]}
                                              401 {:body [:map [:error :string]]}}
-                                 :handler secret-handler}}]]])
+                                 :handler (constantly
+                                           {:status http-status/ok
+                                            :body {:secret "I am a little weasel"}})}}]]])
 
 (defn ->router
   [config]
@@ -93,7 +77,8 @@
                         ;; coercing request parameters
                         coercion/coerce-request-middleware
                         ;; multipart
-                        multipart/multipart-middleware]}}))
+                        multipart/multipart-middleware
+                        authorization/wrap-authorization]}}))
 
 (defn ->handler
   [config]
