@@ -1,213 +1,175 @@
 (ns piotr-yuxuan.service-template.starling-api.ops
   (:require
-   [clj-http.client :as http]
    [clojure.string :as str]
-   [jsonista.core :as j]
    [malli.core :as m]
-   [malli.transform :as mt]
+   [piotr-yuxuan.service-template.http :as st.http]
    [piotr-yuxuan.service-template.openapi-spec :as openapi-spec]
+   [piotr-yuxuan.service-template.railway :refer [bind ok]]
    [piotr-yuxuan.service-template.starling-api.entity :as entity]
-   [reitit.ring.malli]
-   [safely.core :refer [safely]]))
+   [reitit.ring.malli]))
 
-(defn request->response
-  [request]
-  (let [response (safely (http/request (assoc request :throw-exceptions false))
-                   :on-error
-                   :circuit-breaker ::api
-                   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-                   :max-retries 5)]
-    (if (:body response)
-      (update response :body (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper))
-      response)))
+(def auth-schema->
+  (m/schema [:map [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]]))
 
-(def GetAccountResponse
-  (m/schema
-   [:map {:closed true}
-    [:accounts
-     [:sequential entity/Account]]]))
-
-(def GetAccountResponse-body-decoder
-  (m/decoder GetAccountResponse (mt/transformer
-                                 mt/strip-extra-keys-transformer
-                                 mt/json-transformer)))
+(def get-accounts-schema<-
+  (m/schema [:map [:body [:map [:accounts [:sequential entity/Account]]]]]))
 
 (defn get-accounts
   [{::keys [api-base]} {:keys [token]}]
-  (-> (request->response
-       {:method :get
-        :url (str/join "/" [api-base "v2/accounts"])
-        :headers {"accept" "application/json"
-                  "authorization" (str "Bearer " token)}})
-      :body
-      GetAccountResponse-body-decoder
-      :accounts))
+  (let [request {:method :get
+                 :url (str/join "/" [api-base "v2/accounts"])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)}}]
+    (bind (st.http/request->response auth-schema->
+                                     get-accounts-schema<-
+                                     request)
+          (comp ok :body))))
 
-(def GetFeedTransactionsBetween
-  (m/schema
-   [:map {:closed true}
-    [:feedItems
-     [:sequential entity/FeedItem]]]))
+(def get-feed-transactions-between-schema->
+  (m/schema [:map
+             [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
+             [:query-params
+              [:map
+               ["minTransactionTimestamp" inst?]
+               ["maxTransactionTimestamp" inst?]]]]))
 
-(def GetFeedTransactionsBetween-body-decoder
-  (m/decoder GetFeedTransactionsBetween (mt/transformer
-                                         mt/strip-extra-keys-transformer
-                                         mt/json-transformer)))
+(def get-feed-transactions-between-schema<-
+  (m/schema [:map [:body [:map [:feedItems [:sequential entity/FeedItem]]]]]))
 
 (defn get-feed-transactions-between
   [{::keys [api-base]} {:keys [token account-uid category-uid min-timestamp max-timestamp]}]
-  (-> {:method :get
-       :url (str/join "/" [api-base "v2/feed/account" account-uid "category" category-uid "transactions-between"])
-       :headers {"accept" "application/json"
-                 "authorization" (str "Bearer " token)}
-       :query-params {"minTransactionTimestamp" (m/encode inst? min-timestamp mt/json-transformer)
-                      "maxTransactionTimestamp" (m/encode inst? max-timestamp mt/json-transformer)}}
-      request->response
-      :body
-      GetFeedTransactionsBetween-body-decoder
-      :feedItems))
+  (let [request {:method :get
+                 :url (str/join "/" [api-base "v2/feed/account" account-uid
+                                     "category" category-uid
+                                     "transactions-between"])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)}
+                 :query-params {"minTransactionTimestamp" min-timestamp
+                                "maxTransactionTimestamp" max-timestamp}}]
+    (bind (st.http/request->response get-feed-transactions-between-schema->
+                                     get-feed-transactions-between-schema<-
+                                     request)
+          (comp ok :feedItems :body))))
 
-(def SavingsGoalsV2
-  (m/schema
-   [:map {:closed true}
-    [:savingsGoalList
-     [:sequential entity/SavingsGoalV2]]]))
-
-(def SavingsGoalsV2-body-decoder
-  (m/decoder SavingsGoalsV2 (mt/transformer
-                             mt/strip-extra-keys-transformer
-                             mt/json-transformer)))
+(def get-all-savings-goals-schema<-
+  (m/schema [:map [:body [:map [:savingsGoalList [:sequential entity/SavingsGoalV2]]]]]))
 
 (defn get-all-savings-goals
   [{::keys [api-base]} {:keys [token account-uid]}]
-  (-> {:method :get
-       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
-       :headers {"accept" "application/json"
-                 "authorization" (str "Bearer " token)}}
-      request->response
-      :body
-      SavingsGoalsV2-body-decoder
-      :savingsGoalList))
+  (let [request {:method :get
+                 :url (str/join "/" [api-base "v2/account" account-uid
+                                     "savings-goals"])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)}}]
+    (bind (st.http/request->response auth-schema->
+                                     get-all-savings-goals-schema<-
+                                     request)
+          (comp ok :savingsGoalList :body))))
 
-(def PutCreateASavingsGoalRequestBody
-  (m/schema
-   [:map {:closed true}
-    [:name [:string {:min 1}]]
-    [:currency entity/Currency]]))
+(def put-create-a-savings-goal-schema->
+  (m/schema [:map
+             [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
+             [:body [:map {:closed true}
+                     [:name [:string {:min 1}]]
+                     [:currency entity/Currency]]]]))
 
-(def PutCreateASavingsGoalRequestBody-encoder
-  (comp jsonista.core/write-value-as-string
-        (m/encoder PutCreateASavingsGoalRequestBody (mt/transformer
-                                                     mt/strip-extra-keys-transformer
-                                                     mt/json-transformer))))
-
-(def CreateOrUpdateSavingsGoalResponseV2
-  (m/schema
-   [:map {:closed true}
-    [:savingsGoalUid uuid?]
-    [:success boolean?]]))
-
-(def CreateOrUpdateSavingsGoalResponseV2-decoder
-  (m/decoder CreateOrUpdateSavingsGoalResponseV2 (mt/transformer
-                                                  mt/strip-extra-keys-transformer
-                                                  mt/json-transformer)))
+(def put-create-a-savings-goal-schema<-
+  (m/schema [:map
+             [:body [:map {:closed true}
+                     [:savingsGoalUid uuid?]
+                     [:success boolean?]]]]))
 
 (defn put-create-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid]}]
-  (-> {:method :put
-       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
-       :headers {"accept" "application/json"
-                 "content-type" "application/json"
-                 "authorization" (str "Bearer " token)}
-       :body (PutCreateASavingsGoalRequestBody-encoder
-              {:name "Round it up!"
-               :currency "GBP"})}
-      request->response
-      :body
-      CreateOrUpdateSavingsGoalResponseV2-decoder))
+  (let [request {:method :put
+                 :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                 :headers {"accept" "application/json"
+                           "content-type" "application/json"
+                           "authorization" (str "Bearer " token)}
+                 :body {:name "Round it up!"
+                        :currency "GBP"}}]
+    (bind (st.http/request->response put-create-a-savings-goal-schema->
+                                     put-create-a-savings-goal-schema<-
+                                     request)
+          (comp ok :body))))
 
 (defn delete-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
-  (-> {:method :delete
-       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
-       :headers {"accept" "application/json"
-                 "content-type" "application/json"
-                 "authorization" (str "Bearer " token)}}
-      request->response
-      :body))
+  (let [request {:method :delete
+                 :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
+                 :headers {"accept" "application/json"
+                           "content-type" "application/json"
+                           "authorization" (str "Bearer " token)}}]
+    (bind (st.http/request->response auth-schema-> :any request)
+          (comp ok :body))))
 
-(def SavingsGoalV2-body-decoder
-  (m/decoder entity/SavingsGoalV2 (mt/transformer
-                                   mt/strip-extra-keys-transformer
-                                   mt/json-transformer)))
+(def get-one-savings-goal-schema<-
+  (m/schema [:map
+             [:body entity/SavingsGoalV2]]))
 
 (defn get-one-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
-  (-> {:method :get
-       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
-       :headers {"accept" "application/json"
-                 "authorization" (str "Bearer " token)}}
-      request->response
-      :body
-      SavingsGoalV2-body-decoder))
+  (let [request {:method :get
+                 :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)}}]
+    (bind (st.http/request->response auth-schema->
+                                     get-one-savings-goal-schema<-
+                                     request)
+          (comp ok :body))))
 
-(def ConfirmationOfFundsResponse
-  (m/schema
-   [:map {:closed true}
-    [:requestedAmountAvailableToSpend boolean?]
-    [:accountWouldBeInOverdraftIfRequestedAmountSpent boolean?]]))
+(def get-confirmation-of-funds-schema->
+  (m/schema [:map
+             [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
+             [:query-params [:map [:targetAmountInMinorUnits int?]]]]))
 
-(def ConfirmationOfFundsResponse-body-decoder
-  (m/decoder ConfirmationOfFundsResponse (mt/transformer
-                                          mt/strip-extra-keys-transformer
-                                          mt/json-transformer)))
+(def get-confirmation-of-funds-schema<-
+  (m/schema [:map
+             [:body
+              [:map
+               [:requestedAmountAvailableToSpend boolean?]
+               [:accountWouldBeInOverdraftIfRequestedAmountSpent boolean?]]]]))
 
 (defn get-confirmation-of-funds
   [{::keys [api-base]} {:keys [token account-uid target-amount]}]
-  (-> {:method :get
-       :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
-       :headers {"accept" "application/json"
-                 "authorization" (str "Bearer " token)}
-       :query-params {"targetAmountInMinorUnits" (m/encode int? target-amount mt/json-transformer)}}
-      request->response
-      :body
-      ConfirmationOfFundsResponse-body-decoder))
+  (let [request {:method :get
+                 :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)}
+                 :query-params {:targetAmountInMinorUnits target-amount}}]
+    (bind (st.http/request->response get-confirmation-of-funds-schema->
+                                     get-confirmation-of-funds-schema<-
+                                     request)
+          (comp ok :body))))
 
-(def TopUpRequestV2
+(def put-add-money-to-saving-goal-schema->
   (m/schema
-   [:map {:closed true}
-    [:amount entity/CurrencyAndAmount]
-    [:reference {:optional true} [:string {:max 100}]]]))
+   [:map
+    [:body
+     [:map
+      [:amount entity/CurrencyAndAmount]
+      [:reference {:optional true} [:string {:max 100}]]]]]))
 
-(def TopUpRequestV2-encoder
-  (comp jsonista.core/write-value-as-string
-        (m/encoder TopUpRequestV2 (mt/transformer
-                                   mt/strip-extra-keys-transformer
-                                   mt/json-transformer))))
-
-(def SavingsGoalTransferResponseV2
+(def put-add-money-to-saving-goal-schema<-
   (m/schema
-   [:map {:closed true}
-    [:transferUid uuid?]
-    [:success boolean?]]))
-
-(def SavingsGoalTransferResponseV2-body-decoder
-  (m/decoder SavingsGoalTransferResponseV2 (mt/transformer
-                                            mt/strip-extra-keys-transformer
-                                            mt/json-transformer)))
+   [:map
+    [:body
+     [:map
+      [:transferUid uuid?]
+      [:success boolean?]]]]))
 
 (defn put-add-money-to-saving-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]
-  (-> {:method :put
-       :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
-       :headers {"accept" "application/json"
-                 "authorization" (str "Bearer " token)
-                 "content-type" "application/json"}
-       :body (TopUpRequestV2-encoder {:amount amount})}
-      request->response
-      :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
-      SavingsGoalTransferResponseV2-body-decoder))
+  (let [request {:method :put
+                 :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
+                 :headers {"accept" "application/json"
+                           "authorization" (str "Bearer " token)
+                           "content-type" "application/json"}
+                 :body {:amount amount}}]
+    (bind (st.http/request->response put-add-money-to-saving-goal-schema->
+                                     put-add-money-to-saving-goal-schema<-
+                                     request)
+          (comp ok :body))))
 
 (def api-reference-version
   "This is hard-coded because the code above and test have been
@@ -218,8 +180,6 @@
   [{::keys [api-base] :as config}]
   (let [diff (openapi-spec/diff api-reference-version (str/join "/" [api-base "openapi.json"]))]
     (when-not (openapi-spec/compatible? diff)
-      (let [incompatible-changes (openapi-spec/changes diff)]
-        (println incompatible-changes)
-        (throw (ex-info "The current version API is incompatible with the reference version, can't start."
-                        {:incompatible-changes incompatible-changes})))))
+      (throw (ex-info "The current version API is incompatible with the reference version, can't start."
+                      {:incompatible-changes (println-str (openapi-spec/changes diff))}))))
   config)
