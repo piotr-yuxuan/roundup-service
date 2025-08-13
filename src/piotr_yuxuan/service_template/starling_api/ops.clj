@@ -12,11 +12,14 @@
 
 (defn request->response
   [request]
-  (safely (http/request (assoc request :throw-exceptions false))
-    :on-error
-    :circuit-breaker ::api
-    :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-    :max-retries 5))
+  (let [response (safely (http/request (assoc request :throw-exceptions false))
+                   :on-error
+                   :circuit-breaker ::api
+                   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+                   :max-retries 5)]
+    (if (:body response)
+      (update response :body (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper))
+      response)))
 
 (def GetAccountResponse
   (m/schema
@@ -37,7 +40,6 @@
         :headers {"accept" "application/json"
                   "authorization" (str "Bearer " token)}})
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       GetAccountResponse-body-decoder
       :accounts))
 
@@ -62,7 +64,6 @@
                       "maxTransactionTimestamp" (m/encode inst? max-timestamp mt/json-transformer)}}
       request->response
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       GetFeedTransactionsBetween-body-decoder
       :feedItems))
 
@@ -85,7 +86,6 @@
                  "authorization" (str "Bearer " token)}}
       request->response
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       SavingsGoalsV2-body-decoder
       :savingsGoalList))
 
@@ -124,7 +124,6 @@
                :currency "GBP"})}
       request->response
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       CreateOrUpdateSavingsGoalResponseV2-decoder))
 
 (defn delete-a-savings-goal
@@ -135,8 +134,7 @@
                  "content-type" "application/json"
                  "authorization" (str "Bearer " token)}}
       request->response
-      :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)))
+      :body))
 
 (def SavingsGoalV2-body-decoder
   (m/decoder entity/SavingsGoalV2 (mt/transformer
@@ -151,7 +149,6 @@
                  "authorization" (str "Bearer " token)}}
       request->response
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       SavingsGoalV2-body-decoder))
 
 (def ConfirmationOfFundsResponse
@@ -174,7 +171,6 @@
        :query-params {"targetAmountInMinorUnits" (m/encode int? target-amount mt/json-transformer)}}
       request->response
       :body
-      (jsonista.core/read-value jsonista.core/keyword-keys-object-mapper)
       ConfirmationOfFundsResponse-body-decoder))
 
 (def TopUpRequestV2
