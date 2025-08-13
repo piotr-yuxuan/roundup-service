@@ -62,93 +62,86 @@
                     (.longValueExact))]
     (- rounded n)))
 
-;; Step: get the primary account
 (defn get-primary-account
-  [config bag]
-  (let [accounts (starling-api/get-accounts config bag)]
+  [{:keys [config args] :as ctx}]
+  (let [accounts (starling-api/get-accounts config args)]
     (if-let [primary-account (->> accounts
                                   (filter (comp #{"PRIMARY"} :accountType))
                                   (sort-by :createdAt)
                                   first)]
-      (ok (assoc bag
-                 :category-uid (:defaultCategory primary-account)
-                 :account-uid (:accountUid primary-account)))
+      (ok (-> ctx
+              (assoc :primary-account primary-account)
+              (update :args assoc
+                      :category-uid (:defaultCategory primary-account)
+                      :account-uid (:accountUid primary-account))))
       (error {:step :get-primary-account
               :reason "No primary account found"}))))
 
-;; Step: get feed transactions between timestamps for the default category
 (defn get-feed-transactions
-  [config bag]
+  [{:keys [config args] :as ctx}]
   (if-let [all-txs (seq (starling-api/get-feed-transactions-between
                          config
-                         bag))]
-    (ok (assoc bag :all-txs all-txs))
+                         args))]
+    (ok (assoc ctx :all-txs all-txs))
     (error {:step :get-feed-transactions
             :reason "No transactions found"})))
 
-;; Step: filter eligible transactions
 (defn filter-eligible-transactions
-  [_ {:keys [all-txs] :as bag}]
+  [{:keys [all-txs] :as ctx}]
   (if-let [eligible-txs (->> all-txs
                              (filter (comp #{"SETTLED"} :status))
                              (filter (comp #{"OUT"} :direction))
                              seq)]
-    (ok (assoc bag :eligible-txs eligible-txs))
+    (ok (assoc ctx :eligible-txs eligible-txs))
     (error {:step :filter-eligible-transactions
             :reason "No eligible transactions"})))
 
-;; Step: calculate round-up amount
 (defn calculate-round-up
-  [_ {:keys [eligible-txs] :as bag}]
+  [{:keys [eligible-txs] :as ctx}]
   (->> eligible-txs
        (map (comp (partial round-up-difference 2)
                   :minorUnits
                   :amount))
        (reduce +)
        (assoc {:currency "GBP"} :minorUnits)
-       (assoc bag :round-up-amount)
+       (assoc ctx :round-up-amount)
        ok))
 
-;; Step: get savings goal (active and stable sorted)
 (defn get-savings-goal
-  [config bag]
-  (if-let [savings-goal (->> (starling-api/get-all-savings-goals config bag)
+  [{:keys [config args] :as ctx}]
+  (if-let [savings-goal (->> (starling-api/get-all-savings-goals config args)
                              (filter (comp #{"ACTIVE"} :state))
                              (sort-by :savingsGoalUid)
                              first)]
-    (ok (assoc bag :savings-goal savings-goal))
+    (ok (update ctx :args assoc :savings-goal savings-goal))
     (error {:step :get-savings-goal :reason "No active savings goal found"})))
 
-;; Step: confirmation of funds
 (defn get-confirmation-of-funds
-  [config bag]
+  [{:keys [config args] :as ctx}]
   (if-let [confirmation (starling-api/get-confirmation-of-funds
                          config
-                         (assoc bag :target-amount (-> bag :round-up-amount :minorUnits)))]
-    (ok (assoc bag :confirmation confirmation))
+                         (assoc args :target-amount (-> ctx :round-up-amount :minorUnits)))]
+    (ok (assoc ctx :confirmation confirmation))
     (error {:step :confirmation-of-funds :reason "Failed to confirm funds"})))
 
-;; Step: transfer money to saving goal
 (defn add-money-to-saving-goal
-  [config bag]
+  [{:keys [config args] :as ctx}]
   (if-let [response (starling-api/put-add-money-to-saving-goal
                      config
-                     (assoc bag
-                            :transfer-uid (UUID/randomUUID)
-                            :savings-goal-uid (-> bag :savings-goal :savingsGoalUid)
-                            :amount (-> bag :round-up-amount)))]
-    (ok (assoc bag :transfer-status response))
+                     (assoc args
+                            :savings-goal-uid (-> args :savings-goal :savingsGoalUid)
+                            :amount (-> ctx :round-up-amount)))]
+    (ok (assoc ctx :transfer-status response))
     (error {:step :add-money-to-saving-goal :reason "Transfer failed"})))
 
 (defn round-up
-  [config token]
-  (-> (ok {:token token
-           :min-timestamp #inst "2024-12-30T00:00:00Z"
-           :max-timestamp #inst "2025-09-01T12:34:56.000Z"})
-      (bind (partial get-primary-account config))
-      (bind (partial get-feed-transactions config))
-      (bind (partial filter-eligible-transactions config))
-      (bind (partial calculate-round-up config))
-      (bind (partial get-savings-goal config))
-      (bind (partial get-confirmation-of-funds config))
-      (bind (partial add-money-to-saving-goal config))))
+  [config args]
+  (-> (ok {:config config
+           :args args})
+      (bind get-primary-account)
+      (bind get-feed-transactions)
+      (bind filter-eligible-transactions)
+      (bind calculate-round-up)
+      (bind get-savings-goal)
+      (bind get-confirmation-of-funds)
+      (bind add-money-to-saving-goal)))
