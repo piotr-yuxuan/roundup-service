@@ -31,7 +31,7 @@
   [["/openapi.json"
     {:get {:no-doc true
            :openapi {:info {:title "my-api"
-                            :description "openapi3 docs with [malli](https://github.com/metosin/malli) and reitit-ring"
+                            :description (slurp (io/resource "OpenAPI frontpage description.md"))
                             :version "0.0.1"}
                      :components {:securitySchemes {"bearer" {:type :http
                                                               :scheme "bearer"
