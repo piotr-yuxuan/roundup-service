@@ -108,4 +108,4 @@
 
 (comment
   (require '[piotr-yuxuan.service-template.config :as config])
-  (user/restart user/app (assoc (config/load-config []) ::db/migrate? true)))
+  (user/restart user/app (assoc (config/load-config []) ::migrate? true)))
