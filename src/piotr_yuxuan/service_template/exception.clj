@@ -5,30 +5,18 @@
    [reitit.ring.middleware.exception :as exception]
    [ring.util.http-status :as http-status]))
 
-(defn handler [message exception request]
-  {:status http-status/internal-server-error
-   :body {:message message
-          :exception (.getClass exception)
-          :data (ex-data exception)
-          :uri (:uri request)}})
+(defn short-circuit-handler
+  [ex request]
+  (let [ex-data (ex-data ex)]
+    {:status (:status ex-data http-status/internal-server-error)
+     :body (:body ex-data {:message (or (ex-message ex) "Internal server error")
+                           :request (select-keys request [:request-method :uri :path-params :body-params])})}))
 
 (def exception-middleware
   (exception/create-exception-middleware
    (merge
     exception/default-handlers
-    {;; ex-data with :type ::error
-     ::error (partial handler "Internal server.")
-
-       ;; ex-data with ::exception or ::failure
-     ::exception (partial handler "exception")
-
-       ;; SQLException and all it's child classes
-     java.sql.SQLException (partial handler "sql-exception")
-
-       ;; override the default handler
-     ::exception/default (partial handler "default")
-
-       ;; print stack-traces for all exceptions
+    {::short-circuit short-circuit-handler
      ::exception/wrap (fn [handler e request]
                         (println "ERROR" (pr-str (:uri request)))
                         (handler e request))})))
