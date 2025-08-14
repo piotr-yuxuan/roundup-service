@@ -94,15 +94,17 @@
                                     put-create-a-savings-goal-schema<-)
          :body)))
 
-(defn delete-a-savings-goal
+;; This function has a private hint prefix and is not tested because
+;; it is used for development purpose only.
+(defn -delete-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
   (let [request {:method :delete
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                  :headers {"accept" "application/json"
-                           "content-type" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema-> :any request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response auth-schema-> :any)
+         :body)))
 
 (def get-one-savings-goal-schema<-
   (m/schema [:map
