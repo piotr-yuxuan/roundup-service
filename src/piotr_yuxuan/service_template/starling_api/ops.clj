@@ -116,10 +116,10 @@
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-one-savings-goal-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response auth-schema->
+                                    get-one-savings-goal-schema<-)
+         :body)))
 
 (def get-confirmation-of-funds-schema->
   (m/schema [:map
