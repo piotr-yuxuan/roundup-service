@@ -108,35 +108,35 @@
         savings-goal-currency (mg/generate entity/Currency)
         token (mg/generate [:string {:min 10 :max 15}])
         account-uid (UUID/randomUUID)]
-    (testing "creating a saving goal"
-      (let [body (->> ops/put-create-a-savings-goal-schema<- mg/generate :body)
-            expected-request {:method :put
-                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
-                              :headers {"accept" "application/json"
-                                        "content-type" "application/json"
-                                        "authorization" (str "Bearer " token)}
-                              :body {:name savings-goal-name
-                                     :currency savings-goal-currency}}]
-        (with-redefs [st.http/request->response
-                      (fn [_ _ request]
-                        (is (= expected-request request))
-                        {:status http-status/ok
-                         :body body})]
-          (is (= body
-                 (ops/put-create-a-savings-goal
-                  {::ops/api-base api-base}
-                  {:token token
-                   :account-uid account-uid
-                   :savings-goal-name savings-goal-name
-                   :savings-goal-currency savings-goal-currency}))))))))
+    (let [body (->> ops/put-create-a-savings-goal-schema<- mg/generate :body)
+          expected-request {:method :put
+                            :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                            :headers {"accept" "application/json"
+                                      "content-type" "application/json"
+                                      "authorization" (str "Bearer " token)}
+                            :body {:name savings-goal-name
+                                   :currency savings-goal-currency}}]
+      (with-redefs [st.http/request->response
+                    (fn [_ _ request]
+                      (is (= expected-request request))
+                      {:status http-status/ok
+                       :body body})]
+        (is (= body
+               (ops/put-create-a-savings-goal
+                {::ops/api-base api-base}
+                {:token token
+                 :account-uid account-uid
+                 :savings-goal-name savings-goal-name
+                 :savings-goal-currency savings-goal-currency})))))))
 
 (deftest get-one-savings-goal-test
   (let [api-base (mg/generate [:string {:min 10 :max 15}])
         token (mg/generate [:string {:min 10 :max 15}])
         account-uid (UUID/randomUUID)
         savings-goal-uid (UUID/randomUUID)]
-    (testing "creating a saving goal"
-      (let [expected-request {:method :delete
+    (testing "with entities returned"
+      (let [body (->> ops/get-one-savings-goal-schema<- mg/generate :body)
+            expected-request {:method :get
                               :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                               :headers {"accept" "application/json"
                                         "authorization" (str "Bearer " token)}}]
@@ -144,13 +144,13 @@
                       (fn [_ _ request]
                         (is (= expected-request request))
                         {:status http-status/ok
-                         :body nil})]
-          (is (-> (ops/delete-a-savings-goal
+                         :body body})]
+          (is (-> (ops/get-one-savings-goal
                    {::ops/api-base api-base}
                    {:token token
                     :account-uid account-uid
                     :savings-goal-uid savings-goal-uid})
-                  seq nil?)))))))
+                  (= body))))))))
 
 (deftest get-confirmation-of-funds-test
   (let [api-base (mg/generate [:string {:min 10 :max 15}])
