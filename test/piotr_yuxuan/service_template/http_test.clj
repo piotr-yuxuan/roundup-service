@@ -158,4 +158,5 @@
         (is (= (ex-data ex)
                {:type ::st.exception/short-circuit
                 :body {:request {:url "https://example.org"}
-                       :response {:status http-response/continue}}}))))))
+                       :response {:status http-status/continue
+                                  :body ""}}}))))))
