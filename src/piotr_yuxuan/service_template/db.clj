@@ -3,13 +3,15 @@
    [clojure.java.io :as io]
    [malli.core :as m]
    [malli.error :as me]
+   [malli.util :as mu]
    [migratus.core :as migratus]
    [next.jdbc :as jdbc]
    [next.jdbc.connection :as connection]
    [next.jdbc.result-set :as rs]
    [next.jdbc.types :refer [as-other]]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
-   [piotr-yuxuan.service-template.starling-api.entity :as entity])
+   [piotr-yuxuan.service-template.starling-api.entity :as entity]
+   [piotr-yuxuan.service-template.exception :as st.exception])
   (:import
    (com.zaxxer.hikari HikariDataSource)))
 
@@ -27,9 +29,14 @@
 (defn insert-roundup-job!
   "Create a new recors, returning the full record as from the database."
   [{::keys [datasource] :query/keys [insert-job-execution]} {:keys [account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week] :as round-up-job}]
-  (when-let [error (m/explain RoundupJobExecution round-up-job)]
-    (throw (ex-info "Unexpected values" {:round-up-job round-up-job
-                                         :explanation (me/humanize error)})))
+  (let [prepared-parameters [:account-uid :savings-goal-uid :round-up-amount-in-minor-units :calendar-year :calendar-week]]
+    (when-let [error (-> RoundupJobExecution
+                         (mu/select-keys prepared-parameters)
+                         (mu/update-properties assoc :closed true)
+                         (m/explain round-up-job))]
+      (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
+                                                  :body {:round-up-job round-up-job
+                                                         :explanation (me/humanize error)}}))))
   (-> datasource
       (jdbc/execute! [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
                      {:timeout 5
@@ -41,20 +48,36 @@
   Write all columns considered as a `PUT`, not a partial write as a
   `PATCH`."
   [{::keys [datasource] :query/keys [update-job-execution]} {:keys [savings-goal-uid round-up-amount-in-minor-units status account-uid calendar-year calendar-week] :as round-up-job}]
-  (when-let [error (m/explain RoundupJobExecution round-up-job)]
-    (throw (ex-info "Unexpected values" {:round-up-job round-up-job
-                                         :explanation (me/humanize error)})))
+  (let [prepared-parameters [:savings-goal-uid :round-up-amount-in-minor-units :status :account-uid :calendar-year :calendar-week]]
+    (when-let [error (-> RoundupJobExecution
+                         (mu/select-keys prepared-parameters)
+                         mu/required-keys
+                         (mu/update-properties assoc :closed true)
+                         (m/explain round-up-job))]
+      (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
+                                                  :body {:round-up-job round-up-job
+                                                         :explanation (me/humanize error)}}))))
   (let [[record] (jdbc/execute! datasource
                                 [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
                                 {:timeout 5
                                  :builder-fn rs/as-unqualified-kebab-maps})]
     (when-not record
-      (throw (ex-info "No round-up jobs found." round-up-job)))
+      (throw (ex-info "No round-up jobs found." {:type ::st.exception/short-circuit
+                                                 :body {:round-up-job round-up-job}})))
     record))
 
 (defn find-roundup-job
   "Retrieve record from database, return it or `nil` if not found."
-  [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week]}]
+  [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week] :as args}]
+  (let [prepared-parameters [:account-uid :calendar-year :calendar-week]]
+    (when-let [error (-> RoundupJobExecution
+                         (mu/select-keys prepared-parameters)
+                         mu/required-keys
+                         (mu/update-properties assoc :closed true)
+                         (m/explain args))]
+      (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
+                                                  :body {:args args
+                                                         :explanation (me/humanize error)}}))))
   (-> datasource
       (jdbc/execute!
        [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]

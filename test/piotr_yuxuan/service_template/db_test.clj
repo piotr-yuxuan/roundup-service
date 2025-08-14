@@ -2,10 +2,9 @@
   (:require
    [clj-test-containers.core :as tc]
    [clojure.test :refer [deftest is testing]]
-   [malli.core :as m]
-   [piotr-yuxuan.closeable-map :refer [close!]]
-   [piotr-yuxuan.closeable-map :as closeable-map]
-   [piotr-yuxuan.service-template.db :as db])
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [close!]]
+   [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.exception :as st.exception])
   (:import
    (clojure.lang ExceptionInfo)
    (org.postgresql.util PSQLException)
@@ -13,7 +12,6 @@
 
 (defmethod close! PostgreSQLContainer
   [x]
-  (println ::close)
   (.stop ^PostgreSQLContainer x))
 
 (def pg-port 5432)
@@ -29,58 +27,65 @@
 
 (deftest insert-roundup-job-test
   (testing "happy path"
-    (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
-                                                                            :exposed-ports [pg-port]})))
-                config (db/start (postgres-container->db-config container))]
-      (let [record (db/insert-roundup-job! config
-                                           {:calendar-week 32
-                                            :calendar-year 2025
-                                            :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                            :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                            :round-up-amount-in-minor-units 1234})
-            expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
-                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
-                      :round-up-amount-in-minor-units 1234M,
-                      :calendar-year 2025,
-                      :calendar-week 32,
-                      :status "running"}]
-        (is (contains? record :last-update-at))
-        (is (contains? record :id))
-        (is (contains? record :status))
-        (is (= expected (dissoc record :id :last-update-at))))))
+    (testing "with minimal columns"
+      (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
+                                                                              :exposed-ports [pg-port]})))
+                  config (db/start (postgres-container->db-config container))]
+        (let [record (db/insert-roundup-job! config
+                                             {:calendar-week 32
+                                              :calendar-year 2025
+                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})
+              expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
+                        :savings-goal-uid nil,
+                        :round-up-amount-in-minor-units nil,
+                        :calendar-year 2025,
+                        :calendar-week 32,
+                        :status "running"}]
+          (is (contains? record :last-update-at))
+          (is (contains? record :id))
+          (is (contains? record :status))
+          (is (= expected (dissoc record :id :last-update-at))))))
+
+    (testing "with more optional columns"
+      (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
+                                                                              :exposed-ports [pg-port]})))
+                  config (db/start (postgres-container->db-config container))]
+        (let [record (db/insert-roundup-job! config
+                                             {:calendar-week 32
+                                              :calendar-year 2025
+                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                              :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                              :round-up-amount-in-minor-units 1234})
+              expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
+                        :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
+                        :round-up-amount-in-minor-units 1234M,
+                        :calendar-year 2025,
+                        :calendar-week 32,
+                        :status "running"}]
+          (is (contains? record :last-update-at))
+          (is (contains? record :id))
+          (is (contains? record :status))
+          (is (= expected (dissoc record :id :last-update-at)))))))
 
   (testing "bad argument"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                             :exposed-ports [pg-port]})))
                 config (db/start (postgres-container->db-config container))]
-      (is (thrown-with-msg? ExceptionInfo #"Unexpected values"
-                            (db/insert-roundup-job! config
-                                                    {:calendar-week 32
-                                                     :calendar-year "bad"
-                                                     :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                                     :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                                     :round-up-amount-in-minor-units 1234})))))
-
-  (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
-                                                                          :exposed-ports [pg-port]})))
-              config (db/start (postgres-container->db-config container))]
-    (testing "happy path"
-      (let [actual (db/insert-roundup-job! config
-                                           {:calendar-week 32
-                                            :calendar-year 2025
-                                            :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                            :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                            :round-up-amount-in-minor-units 1234})
-            expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
-                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
-                      :round-up-amount-in-minor-units 1234M,
-                      :calendar-year 2025,
-                      :calendar-week 32,
-                      :status "running"}]
-        (is (contains? actual :last-update-at))
-        (is (contains? actual :id))
-        (is (contains? actual :status))
-        (is (= expected (dissoc actual :id :last-update-at)))))))
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"Invalid named parameters"
+                                     (db/insert-roundup-job! config
+                                                             {:calendar-week 32
+                                                              :calendar-year "bad"
+                                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                              :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                              :round-up-amount-in-minor-units 1234})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:round-up-job {:calendar-week 32
+                                      :calendar-year "bad"
+                                      :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                      :round-up-amount-in-minor-units 1234}
+                       :explanation {:calendar-year ["should be a number" "unknown error"]}}}))))))
 
 (deftest update-roundup-job-test
   (testing "no records found"
@@ -88,10 +93,21 @@
                                                                             :exposed-ports [pg-port]})))
                 config (db/start (postgres-container->db-config container))]
       ;; No records previous inserted.
-      (is (thrown-with-msg? ExceptionInfo #"No round-up jobs found."
-                            (db/update-roundup-job! config {:calendar-week 32
-                                                            :calendar-year 2025
-                                                            :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})))))
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"No round-up jobs found."
+                                     (db/update-roundup-job! config {:calendar-week 32
+                                                                     :calendar-year 2025
+                                                                     :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                                     :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                                     :round-up-amount-in-minor-units 1234
+                                                                     :status "running"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:round-up-job {:calendar-week 32
+                                      :calendar-year 2025
+                                      :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                      :round-up-amount-in-minor-units 1234
+                                      :status "running"}}})))))
 
   (testing "partial update not allowed"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -101,12 +117,18 @@
                       :calendar-year 2025
                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
         (db/insert-roundup-job! config expected)
-        (is (thrown-with-msg? PSQLException #"ERROR: null value in column \"status\" of relation \"roundup_job_execution\" violates not-null constraint"
-                              (db/update-roundup-job! config {:calendar-week 32
-                                                              :calendar-year 2025
-                                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                                              ;; The whole of the modifiable fields should go here.
-                                                              }))))))
+        (let [ex (is (thrown-with-msg? ExceptionInfo #"Invalid named parameters"
+                                       (db/update-roundup-job! config {:calendar-week 32
+                                                                       :calendar-year 2025
+                                                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})))]
+          (is (= (ex-data ex)
+                 {:type ::st.exception/short-circuit
+                  :body {:round-up-job {:calendar-week 32
+                                        :calendar-year 2025
+                                        :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}
+                         :explanation {:savings-goal-uid ["missing required key"]
+                                       :round-up-amount-in-minor-units ["missing required key"]
+                                       :status ["missing required key"]}}}))))))
 
   (testing "happy path"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -120,6 +142,7 @@
                                                 :calendar-year 2025
                                                 :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                 :round-up-amount-in-minor-units 1234
+                                                :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                 :status "running"})
                 :round-up-amount-in-minor-units
                 (= 1234M)))))))
