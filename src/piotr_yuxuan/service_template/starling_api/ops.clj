@@ -124,14 +124,14 @@
 (def get-confirmation-of-funds-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
-             [:query-params [:map [:targetAmountInMinorUnits int?]]]]))
+             [:query-params [:map [:targetAmountInMinorUnits :int]]]]))
 
 (def get-confirmation-of-funds-schema<-
   (m/schema [:map
              [:body
               [:map
-               [:requestedAmountAvailableToSpend boolean?]
-               [:accountWouldBeInOverdraftIfRequestedAmountSpent boolean?]]]]))
+               [:requestedAmountAvailableToSpend :boolean]
+               [:accountWouldBeInOverdraftIfRequestedAmountSpent :boolean]]]]))
 
 (defn get-confirmation-of-funds
   [{::keys [api-base]} {:keys [token account-uid target-amount]}]
@@ -140,10 +140,10 @@
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}
                  :query-params {:targetAmountInMinorUnits target-amount}}]
-    (bind (st.http/request->response get-confirmation-of-funds-schema->
-                                     get-confirmation-of-funds-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response get-confirmation-of-funds-schema->
+                                    get-confirmation-of-funds-schema<-)
+         :body)))
 
 (def put-add-money-to-saving-goal-schema->
   (m/schema

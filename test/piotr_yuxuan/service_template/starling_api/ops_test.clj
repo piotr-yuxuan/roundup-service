@@ -155,6 +155,28 @@
                     :savings-goal-uid savings-goal-uid})
                   seq nil?)))))))
 
-;; (deftest get-confirmation-of-funds-testt)
+(deftest get-confirmation-of-funds-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        target-amount (mg/generate pos-int?)]
+    (testing "with entities returned"
+      (let [{:keys [body]} (mg/generate ops/get-confirmation-of-funds-schema<-)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :query-params {:targetAmountInMinorUnits target-amount}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/get-confirmation-of-funds
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :target-amount target-amount}))))))))
 
 ;; (deftest put-add-money-to-saving-goal-testt)
