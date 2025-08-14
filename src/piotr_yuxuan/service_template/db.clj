@@ -67,5 +67,7 @@
   [config]
   (closeable-map*
    (-> config
-       (assoc ::datasource (->connection-pool config))
+       (assoc ::datasource (->connection-pool config)
+              :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
+              :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql")))
        (doto migrate))))
