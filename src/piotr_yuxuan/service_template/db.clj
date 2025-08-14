@@ -7,9 +7,13 @@
    [next.jdbc :as jdbc]
    [next.jdbc.connection :as connection]
    [next.jdbc.result-set :as rs]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
+   [next.jdbc.types :refer [as-other]]
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
+   [piotr-yuxuan.service-template.db :as db])
   (:import
-   (com.zaxxer.hikari HikariDataSource)))
+   (com.zaxxer.hikari HikariDataSource)
+   (java.math BigDecimal)))
+
 
 (def RoundupJobExecution
   (m/schema
