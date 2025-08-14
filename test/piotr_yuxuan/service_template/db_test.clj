@@ -37,17 +37,17 @@
                                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                       :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                       :round-up-amount-in-minor-units 1234})
-            expected #:roundup_job_execution{:account_uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
-                                             :savings_goal_uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
-                                             :round_up_amount_in_minor_units 1234M,
-                                             :calendar_year 2025,
-                                             :calendar_week 32,
-                                             :status "running"}]
+            expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
+                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
+                      :round-up-amount-in-minor-units 1234M,
+                      :calendar-year 2025,
+                      :calendar-week 32,
+                      :status "running"}]
         (is (= 1 (count ret)))
-        (is (contains? actual :roundup_job_execution/last_update_at))
-        (is (contains? actual :roundup_job_execution/id))
-        (is (contains? actual :roundup_job_execution/status))
-        (is (= expected (dissoc actual :roundup_job_execution/id :roundup_job_execution/last_update_at)))))
+        (is (contains? actual :last-update-at))
+        (is (contains? actual :id))
+        (is (contains? actual :status))
+        (is (= expected (dissoc actual :id :last-update-at)))))
     (testing "bad argument"
       (is (thrown-with-msg? ExceptionInfo #"Unexpected values"
                             (db/insert-roundup-job! config

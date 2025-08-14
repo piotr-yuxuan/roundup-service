@@ -11,6 +11,7 @@
         com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"}
         ;; Do not use slf4j and don't bother about it.
         org.slf4j/slf4j-nop {:mvn/version "2.0.17"}
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
 
         clj-http/clj-http {:mvn/version "3.13.1"} ; HTTP client
         metosin/malli {:mvn/version "0.19.1"}

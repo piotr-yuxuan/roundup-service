@@ -6,6 +6,7 @@
    [migratus.core :as migratus]
    [next.jdbc :as jdbc]
    [next.jdbc.connection :as connection]
+   [next.jdbc.result-set :as rs]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
   (:import
    (com.zaxxer.hikari HikariDataSource)
@@ -29,7 +30,8 @@
                                          :explanation (me/humanize error)})))
   (jdbc/execute! datasource
                  [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
-                 {:timeout 5}))
+                 {:timeout 5
+                  :builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn update-roundup-job!
   [{::keys [datasource] :query/keys [update-job-execution]} {:keys [week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id] :as round-up-job}]
@@ -38,7 +40,9 @@
                                          :explanation (me/humanize error)})))
   (jdbc/execute! datasource
                  [update-job-execution week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id]
-                 {:timeout 5}))
+                 {:timeout 5
+                  :builder-fn rs/as-unqualified-kebab-maps}))
+
 
 (defn ->connection-pool
   ^HikariDataSource [{::keys [hostname port dbname username password]}]
