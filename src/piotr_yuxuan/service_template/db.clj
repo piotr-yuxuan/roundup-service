@@ -1,42 +1,44 @@
 (ns piotr-yuxuan.service-template.db
   (:require
+   [clojure.java.io :as io]
+   [malli.core :as m]
+   [malli.error :as me]
    [migratus.core :as migratus]
    [next.jdbc :as jdbc]
    [next.jdbc.connection :as connection]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
-   [piotr-yuxuan.service-template.config :as config])
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
   (:import
    (com.zaxxer.hikari HikariDataSource)
    (java.time LocalDate)))
 
+(def RoundupJobExecution
+  (m/schema
+   [:map
+    [:id {:optional true} uuid?]
+    [:account-uid [:maybe uuid?]]
+    [:savings-goal-uid [:maybe uuid?]]
+    [:round-up-amount-in-minor-units pos-int?]
+    [:calendar-year [:maybe pos-int?]]
+    [:calendar-week [:maybe pos-int?]]
+    [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
+
 (defn insert-roundup-job!
-  [{::keys [datasource]} {:keys [week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units]}]
-  (jdbc/execute!
-   datasource
-   ["INSERT INTO roundup_job_execution
-        (week_start_date, account_uid, savings_goal_uid, round_up_amount_in_minor_units)
-      VALUES (?, ?, ?, ?)
-      RETURNING *"
-    week-start-date
-    account-uid
-    savings-goal-uid
-    round-up-amount-in-minor-units]))
+  [{::keys [datasource] :query/keys [insert-job-execution]} {:keys [account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week] :as round-up-job}]
+  (when-let [error (m/explain RoundupJobExecution round-up-job)]
+    (throw (ex-info "Unexpected values" {:round-up-job round-up-job
+                                         :explanation (me/humanize error)})))
+  (jdbc/execute! datasource
+                 [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
+                 {:timeout 5}))
 
 (defn update-roundup-job!
-  [{::keys [datasource]} {:keys [id week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units]}]
-  (jdbc/execute!
-   datasource
-   ["UPDATE roundup_job_execution
-      SET week_start_date = ?,
-          account_uid = ?,
-          savings_goal_uid = ?,
-          round_up_amount_in_minor_units = ?
-      WHERE id = ?"
-    week-start-date
-    account-uid
-    savings-goal-uid
-    round-up-amount-in-minor-units
-    id]))
+  [{::keys [datasource] :query/keys [update-job-execution]} {:keys [week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id] :as round-up-job}]
+  (when-let [error (m/explain RoundupJobExecution round-up-job)]
+    (throw (ex-info "Unexpected values" {:round-up-job round-up-job
+                                         :explanation (me/humanize error)})))
+  (jdbc/execute! datasource
+                 [update-job-execution week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id]
+                 {:timeout 5}))
 
 (defn ->connection-pool
   ^HikariDataSource [{::keys [hostname port dbname username password]}]
