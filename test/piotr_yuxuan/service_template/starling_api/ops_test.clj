@@ -179,4 +179,31 @@
                    :account-uid account-uid
                    :target-amount target-amount}))))))))
 
-;; (deftest put-add-money-to-saving-goal-testt)
+(deftest put-add-money-to-saving-goal-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        savings-goal-uid (UUID/randomUUID)
+        transfer-uid (UUID/randomUUID)
+        amount (mg/generate entity/CurrencyAndAmount)]
+    (testing "with entities returned"
+      (let [body (->> ops/put-add-money-to-saving-goal-schema<- mg/generate :body)
+            expected-request {:method :put
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)
+                                        "content-type" "application/json"}
+                              :body {:amount amount}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/put-add-money-to-saving-goal
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :savings-goal-uid savings-goal-uid
+                   :transfer-uid transfer-uid
+                   :amount amount}))))))))

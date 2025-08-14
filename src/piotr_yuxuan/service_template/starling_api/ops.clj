@@ -169,10 +169,10 @@
                            "authorization" (str "Bearer " token)
                            "content-type" "application/json"}
                  :body {:amount amount}}]
-    (bind (st.http/request->response put-add-money-to-saving-goal-schema->
-                                     put-add-money-to-saving-goal-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response put-add-money-to-saving-goal-schema->
+                                    put-add-money-to-saving-goal-schema<-)
+         :body)))
 
 (def api-reference-version
   "This is hard-coded because the code above and test have been
