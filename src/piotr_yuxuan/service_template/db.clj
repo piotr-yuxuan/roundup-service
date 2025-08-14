@@ -39,10 +39,11 @@
   (when-let [error (m/explain RoundupJobExecution round-up-job)]
     (throw (ex-info "Unexpected values" {:round-up-job round-up-job
                                          :explanation (me/humanize error)})))
-  (jdbc/execute! datasource
-                 [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
-                 {:timeout 5
-                  :builder-fn rs/as-unqualified-kebab-maps}))
+  (-> datasource
+      (jdbc/execute! [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
+                     {:timeout 5
+                      :builder-fn rs/as-unqualified-kebab-maps})
+      first))
 
 (defn update-roundup-job!
   "Write all columns considered as a PUT, not a partial write as a PATCH."
@@ -50,20 +51,22 @@
   (when-let [error (m/explain RoundupJobExecution round-up-job)]
     (throw (ex-info "Unexpected values" {:round-up-job round-up-job
                                          :explanation (me/humanize error)})))
-  (let [[record :as result-set] (jdbc/execute! datasource
-                                               [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
-                                               {:timeout 5
-                                                :builder-fn rs/as-unqualified-kebab-maps})]
-    (when-not (seq result-set)
+  (let [[record] (jdbc/execute! datasource
+                                [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
+                                {:timeout 5
+                                 :builder-fn rs/as-unqualified-kebab-maps})]
+    (when-not record
       (throw (ex-info "No round-up jobs found." round-up-job)))
     record))
 
 (defn find-roundup-job
   [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week]}]
-  (jdbc/execute! datasource
-                 [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
-                 {:timeout 5
-                  :builder-fn rs/as-unqualified-kebab-maps}))
+  (-> datasource
+      (jdbc/execute!
+       [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
+       {:timeout 5
+        :builder-fn rs/as-unqualified-kebab-maps})
+      first))
 
 (defn ->connection-pool
   ^HikariDataSource [{::keys [hostname port dbname username password]}]
