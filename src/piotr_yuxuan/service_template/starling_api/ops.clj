@@ -4,7 +4,6 @@
    [malli.core :as m]
    [piotr-yuxuan.service-template.http :as st.http]
    [piotr-yuxuan.service-template.openapi-spec :as openapi-spec]
-   [piotr-yuxuan.service-template.railway :refer [bind ok]]
    [piotr-yuxuan.service-template.starling-api.entity :as entity]
    [reitit.ring.malli]))
 
@@ -185,4 +184,5 @@
     (when-not (openapi-spec/compatible? diff)
       (throw (ex-info "The current version API is incompatible with the reference version, can't start."
                       {:incompatible-changes (println-str (openapi-spec/changes diff))}))))
+  ;; No need to actually update the config here.
   config)

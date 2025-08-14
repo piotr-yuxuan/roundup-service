@@ -51,6 +51,8 @@
           :else response)))
 
 (defn request->response
+  "This function only returns a coerced valid response, or short-circuit
+  with an exception."
   [request-schema response-schema request]
   (if-let [explanation (me/humanize (m/explain request-schema request))]
     (throw (ex-info "An upstream request doesn't conform to its excepted schema."
