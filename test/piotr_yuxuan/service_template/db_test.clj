@@ -2,11 +2,13 @@
   (:require
    [clj-test-containers.core :as tc]
    [clojure.test :refer [deftest is testing]]
+   [malli.core :as m]
    [piotr-yuxuan.closeable-map :refer [close!]]
    [piotr-yuxuan.closeable-map :as closeable-map]
    [piotr-yuxuan.service-template.db :as db])
   (:import
-   [clojure.lang ExceptionInfo]
+   (clojure.lang ExceptionInfo)
+   (org.postgresql.util PSQLException)
    (org.testcontainers.containers PostgreSQLContainer)))
 
 (defmethod close! PostgreSQLContainer
