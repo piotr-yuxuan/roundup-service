@@ -1,8 +1,8 @@
 UPDATE roundup_job_execution
-SET account_uid = ?,
-    savings_goal_uid = ?,
+SET savings_goal_uid = ?,
     round_up_amount_in_minor_units = ?,
-    calendar_year = ?,
-    calendar_week = ?,
-    status = COALESCE(?, status)
-WHERE id = ?;
+    status = ?
+WHERE account_uid = ?
+  AND calendar_year = ?
+  AND calendar_week = ?
+RETURNING *;

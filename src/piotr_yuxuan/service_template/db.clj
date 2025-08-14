@@ -33,14 +33,18 @@
                   :builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn update-roundup-job!
-  [{::keys [datasource] :query/keys [update-job-execution]} {:keys [week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id] :as round-up-job}]
+  "Write all columns considered as a PUT, not a partial write as a PATCH."
+  [{::keys [datasource] :query/keys [update-job-execution]} {:keys [savings-goal-uid round-up-amount-in-minor-units status account-uid calendar-year calendar-week] :as round-up-job}]
   (when-let [error (m/explain RoundupJobExecution round-up-job)]
     (throw (ex-info "Unexpected values" {:round-up-job round-up-job
                                          :explanation (me/humanize error)})))
-  (jdbc/execute! datasource
-                 [update-job-execution week-start-date account-uid savings-goal-uid round-up-amount-in-minor-units calendar_year calendar_week status id]
-                 {:timeout 5
-                  :builder-fn rs/as-unqualified-kebab-maps}))
+  (let [[record :as result-set] (jdbc/execute! datasource
+                                               [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
+                                               {:timeout 5
+                                                :builder-fn rs/as-unqualified-kebab-maps})]
+    (when-not (seq result-set)
+      (throw (ex-info "No round-up jobs found." round-up-job)))
+    record))
 
 (defn find-roundup-job
   [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week]}]
