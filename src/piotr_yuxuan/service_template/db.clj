@@ -14,16 +14,24 @@
    (com.zaxxer.hikari HikariDataSource)
    (java.math BigDecimal)))
 
+(def non-neg-value?
+  (m/schema
+   [:fn (fn [x]
+          (cond
+            (and (int? x) (<= 0 x)) true
+            (instance? java.math.BigDecimal x) (and (zero? (.scale ^BigDecimal x))
+                                                    (pos? (.intValue x)))
+            :else false))]))
 
 (def RoundupJobExecution
   (m/schema
    [:map
     [:id {:optional true} uuid?]
-    [:account-uid [:maybe uuid?]]
+    [:account-uid uuid?]
     [:savings-goal-uid {:optional true} [:maybe uuid?]]
-    [:round-up-amount-in-minor-units {:optional true} pos-int?]
-    [:calendar-year [:maybe pos-int?]]
-    [:calendar-week [:maybe pos-int?]]
+    [:round-up-amount-in-minor-units {:optional true} non-neg-value?]
+    [:calendar-year non-neg-value?]
+    [:calendar-week non-neg-value?]
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
 
 (defn insert-roundup-job!
