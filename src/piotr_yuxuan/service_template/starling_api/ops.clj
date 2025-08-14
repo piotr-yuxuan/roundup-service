@@ -62,10 +62,10 @@
                                      "savings-goals"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-all-savings-goals-schema<-
-                                     request)
-          (comp ok :savingsGoalList :body))))
+    (->> request
+         (st.http/request->response auth-schema-> get-all-savings-goals-schema<-)
+         :body
+         :savingsGoalList)))
 
 (def put-create-a-savings-goal-schema->
   (m/schema [:map

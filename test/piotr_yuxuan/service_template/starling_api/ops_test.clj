@@ -74,8 +74,36 @@
                   :max-timestamp max-timestamp})
                 seq nil?))))))
 
+(deftest get-all-savings-goals-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)]
+    (testing "with entities returned"
+      (let [{:keys [savingsGoalList] :as body} (->> ops/get-all-savings-goals-schema<- mg/generate :body)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= savingsGoalList
+                 (ops/get-all-savings-goals
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid}))))))
 
-;; (deftest get-all-savings-goals-test)
+    (testing "no entities found"
+      (with-redefs [st.http/request->response (constantly
+                                               {:status http-status/ok
+                                                :body {:savingsGoalList []}})]
+        (is (-> (ops/get-all-savings-goals
+                 {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+                 {:token token
+                  :account-uid account-uid})
+                seq nil?))))))
 
 ;; (deftest put-create-a-savings-goal-testt)
 
