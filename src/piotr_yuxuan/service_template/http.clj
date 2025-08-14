@@ -5,7 +5,7 @@
    [malli.core :as m]
    [malli.error :as me]
    [malli.transform :as mt]
-   [piotr-yuxuan.service-template.railway :refer [error ok]]
+   [piotr-yuxuan.service-template.exception :as st.exception]
    [reitit.ring.malli]
    [ring.util.http-predicates :as http-predicates]
    [ring.util.http-response :as http-response]
@@ -53,19 +53,42 @@
 (defn request->response
   [request-schema response-schema request]
   (if-let [explanation (me/humanize (m/explain request-schema request))]
-    (error {:explanation explanation
-            :type :invalid-request})
+    (throw (ex-info "An upstream request doesn't conform to its excepted schema."
+                    {:type ::st.exception/short-circuit
+                     :body {:request (select-keys request [:body :status])
+                            :explanation explanation}}))
     (let [response (as-> request $
                      (m/encode request-schema $ mt/json-transformer)
                      (-request->response $))]
       (cond
-        (http-predicates/client-error? response) (error (select-keys response [:body :status]))
-        (http-predicates/server-error? response) (error (select-keys response [:body :status]))
-        (http-predicates/success? response) (let [response (m/decode response-schema response
-                                                                     (mt/transformer
-                                                                      mt/strip-extra-keys-transformer
-                                                                      mt/json-transformer))]
-                                              (if (m/validate response-schema response)
-                                                (ok response)
-                                                (error (me/humanize (m/explain response-schema response)))))
-        :else (error "Unexpected response status")))))
+        (http-predicates/client-error? response)
+        (throw (ex-info "Upstream client error"
+                        {:type ::st.exception/short-circuit
+                         :body {:request (select-keys request [:method :url :body :status :query-params])
+                                :response (select-keys response [:body :status])}}))
+
+        (http-predicates/server-error? response)
+        (throw (ex-info "Upstream server error"
+                        {:type ::st.exception/short-circuit
+                         :status http-status/bad-gateway
+                         :body {:request (select-keys request [:method :url :body :status])
+                                :response (select-keys response [:body :status])}}))
+
+        (http-predicates/success? response)
+        (let [response (m/decode response-schema response
+                                 (mt/transformer
+                                  mt/strip-extra-keys-transformer
+                                  mt/json-transformer))]
+          (when-let [explanation (me/humanize (m/explain response-schema response))]
+            (throw (ex-info "An upstream response doesn't conform to its expected schema."
+                            {:type ::st.exception/short-circuit
+                             :body {:request (select-keys request [:method :url :body :status :query-params])
+                                    :response (select-keys response [:body :status])
+                                    :explanation explanation}})))
+          response)
+
+        :else
+        (throw (ex-info "Unexpected upstream response"
+                        {:type ::st.exception/short-circuit
+                         :body {:request (select-keys request [:method :url :body :status :query-params])
+                                :response (select-keys response [:body :status])}}))))))

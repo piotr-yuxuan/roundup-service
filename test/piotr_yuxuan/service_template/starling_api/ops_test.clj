@@ -18,72 +18,192 @@
   (testing "happy path, one account"
     (let [token (mg/generate [:string {:min 10 :max 15}])
           api-base (mg/generate [:string {:min 10 :max 15}])
+          expected (mg/generate entity/Account)
           expected-request {:method :get
                             :url (str/join "/" [api-base "v2/accounts"])
                             :headers {"accept" "application/json"
-                                      "authorization" (str "Bearer " token)}}
-          expected-account (mg/generate entity/Account)]
-      (with-redefs [st.http/-request->response (fn [request]
-                                                 (is (= expected-request request))
-                                                 {:status http-status/ok
-                                                  :body {:accounts [(m/encode entity/Account expected-account mt/json-transformer)]}})]
-        (is (= (ok [expected-account])
-               (ops/get-accounts
-                {::ops/api-base api-base}
-                {:token token}))))))
-  (testing "auth issue"
-    (let [token (mg/generate [:string {:min 10 :max 15}])
-          api-base (mg/generate [:string {:min 10 :max 15}])]
-      (with-redefs [st.http/-request->response (constantly
-                                                {:status http-status/forbidden
-                                                 :body {:error_description "Could not validate provided access token"
-                                                        :error "invalid_token"}})]
-        (is (= (error {:body {:error_description "Could not validate provided access token",
-                              :error "invalid_token"},
-                       :status 403})
+                                      "authorization" (str "Bearer " token)}}]
+      (with-redefs [st.http/request->response (fn [_ _ request]
+                                                (is (= expected-request request))
+                                                {:status http-status/ok
+                                                 :body {:accounts [expected]}})]
+        (is (= [expected]
                (ops/get-accounts
                 {::ops/api-base api-base}
                 {:token token})))))))
 
-(deftest get-feed-transactions-between-test
-  ;; (testing "happy path"
-  ;;   )
+(deftest get-settledtransactions-between-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        category-uid (UUID/randomUUID)
+        min-timestamp (Instant/now)
+        max-timestamp (Instant/now)]
+    (testing "with entities returned"
+      (let [{:keys [feedItems] :as body} (->> ops/get-settled-transactions-between-schema<- mg/generate :body)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/feed/account" account-uid "settled-transactions-between"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :query-params {:minTransactionTimestamp min-timestamp
+                                             :maxTransactionTimestamp max-timestamp}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= feedItems
+                 (ops/get-settled-transactions-between
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :category-uid category-uid
+                   :min-timestamp min-timestamp
+                   :max-timestamp max-timestamp}))))))
 
-  (testing "no transactions"
-    (with-redefs [st.http/-request->response (constantly
-                                              {:status http-status/ok
-                                               :body {:feedItems []}})]
-      (is (= (ok [])
-             (ops/get-feed-transactions-between
-              {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
-              {:token (mg/generate [:string {:min 10 :max 15}])
-               :account-uid (UUID/randomUUID)
-               :category-uid (UUID/randomUUID)
-               :min-timestamp (Instant/now)
-               :max-timestamp (Instant/now)})))))
+    (testing "no entities found"
+      (with-redefs [st.http/request->response (constantly
+                                               {:status http-status/ok
+                                                :body {:feedItems []}})]
+        (is (-> (ops/get-settled-transactions-between
+                 {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+                 {:token token
+                  :account-uid account-uid
+                  :category-uid category-uid
+                  :min-timestamp min-timestamp
+                  :max-timestamp max-timestamp})
+                seq nil?))))))
 
-  (testing "bad request"
-    (let [reason (rand-nth ["UNKNOWN_ACCOUNT" "UNKNOWN_CATEGORY"])]
-      (with-redefs [st.http/-request->response (constantly {:status http-status/bad-request
-                                                            :body {:errors [{:message reason}]
-                                                                   :success false}})]
-        (is (= (error {:body {:errors [{:message reason}]
-                              :success false}
-                       :status 400})
-               (ops/get-feed-transactions-between
-                {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
-                {:token (mg/generate [:string {:min 10 :max 15}])
-                 :account-uid (UUID/randomUUID)
-                 :category-uid (UUID/randomUUID)
-                 :min-timestamp (Instant/now)
-                 :max-timestamp (Instant/now)})))))))
+(deftest get-all-savings-goals-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)]
+    (testing "with entities returned"
+      (let [{:keys [savingsGoalList] :as body} (->> ops/get-all-savings-goals-schema<- mg/generate :body)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= savingsGoalList
+                 (ops/get-all-savings-goals
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid}))))))
 
-;; (deftest get-all-savings-goals-test)
+    (testing "no entities found"
+      (with-redefs [st.http/request->response (constantly
+                                               {:status http-status/ok
+                                                :body {:savingsGoalList []}})]
+        (is (-> (ops/get-all-savings-goals
+                 {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+                 {:token token
+                  :account-uid account-uid})
+                seq nil?))))))
 
-;; (deftest put-create-a-savings-goal-testt)
+(deftest put-create-a-savings-goal-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        savings-goal-name (mg/generate [:string {:min 10 :max 15}])
+        savings-goal-currency (mg/generate entity/Currency)
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)]
+    (testing "creating a saving goal"
+      (let [body (->> ops/put-create-a-savings-goal-schema<- mg/generate :body)
+            expected-request {:method :put
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                              :headers {"accept" "application/json"
+                                        "content-type" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :body {:name savings-goal-name
+                                     :currency savings-goal-currency}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/put-create-a-savings-goal
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :savings-goal-name savings-goal-name
+                   :savings-goal-currency savings-goal-currency}))))))))
 
-;; (deftest get-one-savings-goal-testt)
+(deftest get-one-savings-goal-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        savings-goal-uid (UUID/randomUUID)]
+    (testing "creating a saving goal"
+      (let [expected-request {:method :delete
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body nil})]
+          (is (-> (ops/delete-a-savings-goal
+                   {::ops/api-base api-base}
+                   {:token token
+                    :account-uid account-uid
+                    :savings-goal-uid savings-goal-uid})
+                  seq nil?)))))))
 
-;; (deftest get-confirmation-of-funds-testt)
+(deftest get-confirmation-of-funds-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        target-amount (mg/generate pos-int?)]
+    (testing "with entities returned"
+      (let [{:keys [body]} (mg/generate ops/get-confirmation-of-funds-schema<-)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :query-params {:targetAmountInMinorUnits target-amount}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/get-confirmation-of-funds
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :target-amount target-amount}))))))))
 
-;; (deftest put-add-money-to-saving-goal-testt)
+(deftest put-add-money-to-saving-goal-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        savings-goal-uid (UUID/randomUUID)
+        transfer-uid (UUID/randomUUID)
+        amount (mg/generate entity/CurrencyAndAmount)]
+    (testing "with entities returned"
+      (let [body (->> ops/put-add-money-to-saving-goal-schema<- mg/generate :body)
+            expected-request {:method :put
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)
+                                        "content-type" "application/json"}
+                              :body {:amount amount}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/put-add-money-to-saving-goal
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :savings-goal-uid savings-goal-uid
+                   :transfer-uid transfer-uid
+                   :amount amount}))))))))

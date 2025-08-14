@@ -20,12 +20,13 @@
                  :url (str/join "/" [api-base "v2/accounts"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-accounts-schema<-
-                                     request)
-          (comp ok :accounts :body))))
+    (->> request
+         (st.http/request->response auth-schema->
+                                    get-accounts-schema<-)
+         :body
+         :accounts)))
 
-(def get-feed-transactions-between-schema->
+(def get-settled-transactions-between-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
              [:query-params
@@ -33,23 +34,23 @@
                [:minTransactionTimestamp inst?]
                [:maxTransactionTimestamp inst?]]]]))
 
-(def get-feed-transactions-between-schema<-
+(def get-settled-transactions-between-schema<-
   (m/schema [:map [:body [:map [:feedItems [:sequential entity/FeedItem]]]]]))
 
-(defn get-feed-transactions-between
-  [{::keys [api-base]} {:keys [token account-uid category-uid min-timestamp max-timestamp]}]
+(defn get-settled-transactions-between
+  [{::keys [api-base]} {:keys [token account-uid min-timestamp max-timestamp]}]
   (let [request {:method :get
                  :url (str/join "/" [api-base "v2/feed/account" account-uid
-                                     "category" category-uid
-                                     "transactions-between"])
+                                     "settled-transactions-between"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}
                  :query-params {:minTransactionTimestamp min-timestamp
                                 :maxTransactionTimestamp max-timestamp}}]
-    (bind (st.http/request->response get-feed-transactions-between-schema->
-                                     get-feed-transactions-between-schema<-
-                                     request)
-          (comp ok :feedItems :body))))
+    (->> request
+         (st.http/request->response get-settled-transactions-between-schema->
+                                    get-settled-transactions-between-schema<-)
+         :body
+         :feedItems)))
 
 (def get-all-savings-goals-schema<-
   (m/schema [:map [:body [:map [:savingsGoalList [:sequential entity/SavingsGoalV2]]]]]))
@@ -61,10 +62,10 @@
                                      "savings-goals"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-all-savings-goals-schema<-
-                                     request)
-          (comp ok :savingsGoalList :body))))
+    (->> request
+         (st.http/request->response auth-schema-> get-all-savings-goals-schema<-)
+         :body
+         :savingsGoalList)))
 
 (def put-create-a-savings-goal-schema->
   (m/schema [:map
@@ -76,32 +77,34 @@
 (def put-create-a-savings-goal-schema<-
   (m/schema [:map
              [:body [:map {:closed true}
-                     [:savingsGoalUid uuid?]
-                     [:success boolean?]]]]))
+                     [:savingsGoalUid :uuid]
+                     [:success :boolean]]]]))
 
 (defn put-create-a-savings-goal
-  [{::keys [api-base]} {:keys [token account-uid]}]
+  [{::keys [api-base]} {:keys [token account-uid savings-goal-name savings-goal-currency]}]
   (let [request {:method :put
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
                  :headers {"accept" "application/json"
                            "content-type" "application/json"
                            "authorization" (str "Bearer " token)}
-                 :body {:name "Round it up!"
-                        :currency "GBP"}}]
-    (bind (st.http/request->response put-create-a-savings-goal-schema->
-                                     put-create-a-savings-goal-schema<-
-                                     request)
-          (comp ok :body))))
+                 :body {:name savings-goal-name
+                        :currency savings-goal-currency}}]
+    (->> request
+         (st.http/request->response put-create-a-savings-goal-schema->
+                                    put-create-a-savings-goal-schema<-)
+         :body)))
 
-(defn delete-a-savings-goal
+;; This function has a private hint prefix and is not tested because
+;; it is used for development purpose only.
+(defn -delete-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
   (let [request {:method :delete
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                  :headers {"accept" "application/json"
-                           "content-type" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema-> :any request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response auth-schema-> :any)
+         :body)))
 
 (def get-one-savings-goal-schema<-
   (m/schema [:map
@@ -113,22 +116,22 @@
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-one-savings-goal-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response auth-schema->
+                                    get-one-savings-goal-schema<-)
+         :body)))
 
 (def get-confirmation-of-funds-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
-             [:query-params [:map [:targetAmountInMinorUnits int?]]]]))
+             [:query-params [:map [:targetAmountInMinorUnits :int]]]]))
 
 (def get-confirmation-of-funds-schema<-
   (m/schema [:map
              [:body
               [:map
-               [:requestedAmountAvailableToSpend boolean?]
-               [:accountWouldBeInOverdraftIfRequestedAmountSpent boolean?]]]]))
+               [:requestedAmountAvailableToSpend :boolean]
+               [:accountWouldBeInOverdraftIfRequestedAmountSpent :boolean]]]]))
 
 (defn get-confirmation-of-funds
   [{::keys [api-base]} {:keys [token account-uid target-amount]}]
@@ -137,10 +140,10 @@
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}
                  :query-params {:targetAmountInMinorUnits target-amount}}]
-    (bind (st.http/request->response get-confirmation-of-funds-schema->
-                                     get-confirmation-of-funds-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response get-confirmation-of-funds-schema->
+                                    get-confirmation-of-funds-schema<-)
+         :body)))
 
 (def put-add-money-to-saving-goal-schema->
   (m/schema
@@ -155,8 +158,8 @@
    [:map
     [:body
      [:map
-      [:transferUid uuid?]
-      [:success boolean?]]]]))
+      [:transferUid :uuid]
+      [:success :boolean]]]]))
 
 (defn put-add-money-to-saving-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]
@@ -166,10 +169,10 @@
                            "authorization" (str "Bearer " token)
                            "content-type" "application/json"}
                  :body {:amount amount}}]
-    (bind (st.http/request->response put-add-money-to-saving-goal-schema->
-                                     put-add-money-to-saving-goal-schema<-
-                                     request)
-          (comp ok :body))))
+    (->> request
+         (st.http/request->response put-add-money-to-saving-goal-schema->
+                                    put-add-money-to-saving-goal-schema<-)
+         :body)))
 
 (def api-reference-version
   "This is hard-coded because the code above and test have been

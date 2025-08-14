@@ -6,8 +6,11 @@
    [piotr-yuxuan.service-template.http :as st.http]
    [reitit.ring.malli]
    [ring.util.http-predicates :as http-predicates]
-   [ring.util.http-status :as http-status]
-   [ring.util.http-response :as http-response]))
+   [piotr-yuxuan.service-template.exception :as st.exception]
+   [ring.util.http-response :as http-response]
+   [ring.util.http-status :as http-status])
+  (:import
+   (clojure.lang ExceptionInfo)))
 
 (deftest -request->response-test
   (testing "success, JSON body"
@@ -102,3 +105,58 @@
               (= {:status http-status/internal-server-error
                   :headers {"content-type" "application/json"}
                   :body {:error "Internal error."}}))))))
+
+(deftest request->response-test
+  (testing "request schema error"
+    (is (thrown-with-msg? ExceptionInfo #"An upstream request doesn't conform to its excepted schema."
+                          (st.http/request->response int? int? {}))))
+
+  (testing "upstream client error"
+    (with-redefs [st.http/-request->response (constantly (http-response/bad-request {:error "my bad"}))]
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"Upstream client error"
+                                     (st.http/request->response :any :any {:url "https://example.org"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:request {:url "https://example.org"}
+                       :response {:body {:error "my bad"}
+                                  :status http-status/bad-request}}}))))
+    (with-redefs [st.http/-request->response (constantly (http-response/forbidden {:error "message"}))]
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"Upstream client error"
+                                     (st.http/request->response :any :any {:url "https://example.org"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:request {:url "https://example.org"}
+                       :response {:body {:error "message"}
+                                  :status http-status/forbidden}}})))))
+
+  (testing "upstream server error"
+    (with-redefs [st.http/-request->response (constantly (http-response/bad-gateway {:error "message"}))]
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"Upstream server error"
+                                     (st.http/request->response :any :any {:url "https://example.org"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :status http-status/bad-gateway
+                :body {:request {:url "https://example.org"}
+                       :response {:body {:error "message"}
+                                  :status http-status/bad-gateway}}})))))
+
+  (testing "response schema error"
+    (with-redefs [st.http/-request->response (constantly (http-response/ok {:message "Hire me!"}))]
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"An upstream response doesn't conform to its expected schema."
+                                     (st.http/request->response :any int? {:url "https://example.org"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:request {:url "https://example.org"}
+                       :response {:body {:message "Hire me!"}
+                                  :status 200}
+                       :explanation ["should be an int"]}})))))
+
+  (testing "unexpected upstream response"
+    (with-redefs [st.http/-request->response (constantly (http-response/continue))]
+      (let [ex (is (thrown-with-msg? ExceptionInfo #"Unexpected upstream response"
+                                     (st.http/request->response :any :any {:url "https://example.org"})))]
+        (is (= (ex-data ex)
+               {:type ::st.exception/short-circuit
+                :body {:request {:url "https://example.org"}
+                       :response {:status http-status/continue
+                                  :body ""}}}))))))

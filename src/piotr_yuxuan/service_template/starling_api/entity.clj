@@ -9,12 +9,12 @@
 (def Account
   (m/schema
    [:map {:closed true}
-    [:name string?]
+    [:name :string]
     [:createdAt inst?]
-    [:defaultCategory uuid?]
+    [:defaultCategory :uuid]
     [:currency Currency]
     [:accountType [:enum "PRIMARY" "ADDITIONAL" "LOAN" "FIXED_TERM_DEPOSIT" "SAVINGS"]]
-    [:accountUid uuid?]]))
+    [:accountUid :uuid]]))
 
 (def CurrencyAndAmount
   (m/schema
@@ -26,8 +26,8 @@
 (def FeedItem
   (m/schema
    [:map {:closed true}
-    [:feedItemUid uuid?]
-    [:categoryUid uuid?]
+    [:feedItemUid :uuid]
+    [:categoryUid :uuid]
     [:amount CurrencyAndAmount]
     [:sourceAmount CurrencyAndAmount]
     [:direction [:enum "IN" "OUT"]]
@@ -40,7 +40,7 @@
 (def SavingsGoalV2
   (m/schema
    [:map {:closed true}
-    [:savingsGoalUid uuid?]
-    [:name string?]
+    [:savingsGoalUid :uuid]
+    [:name :string]
     [:totalSaved CurrencyAndAmount]
     [:state [:enum "CREATING" "ACTIVE" "ARCHIVING" "ARCHIVED" "RESTORING" "PENDING"]]]))
