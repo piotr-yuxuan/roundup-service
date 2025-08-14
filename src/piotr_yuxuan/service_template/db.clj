@@ -8,8 +8,7 @@
    [next.jdbc.connection :as connection]
    [next.jdbc.result-set :as rs]
    [next.jdbc.types :refer [as-other]]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
-   [piotr-yuxuan.service-template.db :as db])
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
   (:import
    (com.zaxxer.hikari HikariDataSource)
    (java.math BigDecimal)))
