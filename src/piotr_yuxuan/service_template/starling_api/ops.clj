@@ -76,8 +76,8 @@
 (def put-create-a-savings-goal-schema<-
   (m/schema [:map
              [:body [:map {:closed true}
-                     [:savingsGoalUid uuid?]
-                     [:success boolean?]]]]))
+                     [:savingsGoalUid :uuid]
+                     [:success :boolean]]]]))
 
 (defn put-create-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid]}]
@@ -155,8 +155,8 @@
    [:map
     [:body
      [:map
-      [:transferUid uuid?]
-      [:success boolean?]]]]))
+      [:transferUid :uuid]
+      [:success :boolean]]]]))
 
 (defn put-add-money-to-saving-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid transfer-uid amount]}]
