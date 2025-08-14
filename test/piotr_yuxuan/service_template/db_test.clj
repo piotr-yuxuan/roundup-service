@@ -56,3 +56,30 @@
                                                      :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                      :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                      :round-up-amount-in-minor-units 1234}))))))
+
+(deftest find-roundup-job-test
+  (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
+                                                                          :exposed-ports [pg-port]})))
+              config (db/start (postgres-container->db-config container))]
+    (let [expected {:calendar-week 32
+                    :calendar-year 2025
+                    :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
+      (testing "record doesn't exist" ;; not inserted
+        (is (not (seq (db/find-roundup-job config
+                                           {:calendar-week 32
+                                            :calendar-year 2025
+                                            :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})))))
+      (testing "happy path"
+        (db/insert-roundup-job! config expected)
+        (let [[actual :as ret] (db/find-roundup-job config
+                                                    {:calendar-week 32
+                                                     :calendar-year 2025
+                                                     :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})]
+          (is (= 1 (count ret)))
+          (is (contains? actual :last-update-at))
+          (is (contains? actual :id))
+          (is (contains? actual :status))
+          (is (= expected (select-keys actual
+                                       [:account-uid
+                                        :calendar-year
+                                        :calendar-week]))))))))

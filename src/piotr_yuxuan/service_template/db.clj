@@ -43,6 +43,12 @@
                  {:timeout 5
                   :builder-fn rs/as-unqualified-kebab-maps}))
 
+(defn find-roundup-job
+  [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week]}]
+  (jdbc/execute! datasource
+                 [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
+                 {:timeout 5
+                  :builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn ->connection-pool
   ^HikariDataSource [{::keys [hostname port dbname username password]}]
@@ -75,5 +81,6 @@
    (-> config
        (assoc ::datasource (->connection-pool config)
               :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
-              :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql")))
+              :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
+              :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
        (doto migrate))))
