@@ -46,7 +46,7 @@
 
 (defn get-feed-transactions
   [{:keys [config args] :as ctx}]
-  (if-let [all-txs (seq (starling-api/get-feed-transactions-between
+  (if-let [all-txs (seq (starling-api/get-settled-transactions-between
                          config
                          args))]
     (ok (assoc ctx :all-txs all-txs))

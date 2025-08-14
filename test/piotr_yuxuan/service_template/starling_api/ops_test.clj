@@ -32,38 +32,48 @@
                 {::ops/api-base api-base}
                 {:token token})))))))
 
-(deftest get-feed-transactions-between-test
-  ;; (testing "happy path"
-  ;;   )
+(deftest get-settledtransactions-between-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)
+        category-uid (UUID/randomUUID)
+        min-timestamp (Instant/now)
+        max-timestamp (Instant/now)]
+    (testing "with entities returned"
+      (let [{:keys [feedItems] :as body} (->> ops/get-settled-transactions-between-schema<- mg/generate :body)
+            expected-request {:method :get
+                              :url (str/join "/" [api-base "v2/feed/account" account-uid "settled-transactions-between"])
+                              :headers {"accept" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :query-params {:minTransactionTimestamp min-timestamp
+                                             :maxTransactionTimestamp max-timestamp}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= feedItems
+                 (ops/get-settled-transactions-between
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :category-uid category-uid
+                   :min-timestamp min-timestamp
+                   :max-timestamp max-timestamp}))))))
 
-  (testing "no transactions"
-    (with-redefs [st.http/-request->response (constantly
-                                              {:status http-status/ok
-                                               :body {:feedItems []}})]
-      (is (= (ok [])
-             (ops/get-feed-transactions-between
-              {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
-              {:token (mg/generate [:string {:min 10 :max 15}])
-               :account-uid (UUID/randomUUID)
-               :category-uid (UUID/randomUUID)
-               :min-timestamp (Instant/now)
-               :max-timestamp (Instant/now)})))))
+    (testing "no entities found"
+      (with-redefs [st.http/request->response (constantly
+                                               {:status http-status/ok
+                                                :body {:feedItems []}})]
+        (is (-> (ops/get-settled-transactions-between
+                 {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
+                 {:token token
+                  :account-uid account-uid
+                  :category-uid category-uid
+                  :min-timestamp min-timestamp
+                  :max-timestamp max-timestamp})
+                seq nil?))))))
 
-  (testing "bad request"
-    (let [reason (rand-nth ["UNKNOWN_ACCOUNT" "UNKNOWN_CATEGORY"])]
-      (with-redefs [st.http/-request->response (constantly {:status http-status/bad-request
-                                                            :body {:errors [{:message reason}]
-                                                                   :success false}})]
-        (is (= (error {:body {:errors [{:message reason}]
-                              :success false}
-                       :status 400})
-               (ops/get-feed-transactions-between
-                {::ops/api-base (mg/generate [:string {:min 10 :max 15}])}
-                {:token (mg/generate [:string {:min 10 :max 15}])
-                 :account-uid (UUID/randomUUID)
-                 :category-uid (UUID/randomUUID)
-                 :min-timestamp (Instant/now)
-                 :max-timestamp (Instant/now)})))))))
 
 ;; (deftest get-all-savings-goals-test)
 

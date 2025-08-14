@@ -26,7 +26,7 @@
          :body
          :accounts)))
 
-(def get-feed-transactions-between-schema->
+(def get-settled-transactions-between-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
              [:query-params
@@ -34,23 +34,23 @@
                [:minTransactionTimestamp inst?]
                [:maxTransactionTimestamp inst?]]]]))
 
-(def get-feed-transactions-between-schema<-
+(def get-settled-transactions-between-schema<-
   (m/schema [:map [:body [:map [:feedItems [:sequential entity/FeedItem]]]]]))
 
-(defn get-feed-transactions-between
-  [{::keys [api-base]} {:keys [token account-uid category-uid min-timestamp max-timestamp]}]
+(defn get-settled-transactions-between
+  [{::keys [api-base]} {:keys [token account-uid min-timestamp max-timestamp]}]
   (let [request {:method :get
                  :url (str/join "/" [api-base "v2/feed/account" account-uid
-                                     "category" category-uid
-                                     "transactions-between"])
+                                     "settled-transactions-between"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}
                  :query-params {:minTransactionTimestamp min-timestamp
                                 :maxTransactionTimestamp max-timestamp}}]
-    (bind (st.http/request->response get-feed-transactions-between-schema->
-                                     get-feed-transactions-between-schema<-
-                                     request)
-          (comp ok :feedItems :body))))
+    (->> request
+         (st.http/request->response get-settled-transactions-between-schema->
+                                    get-settled-transactions-between-schema<-)
+         :body
+         :feedItems)))
 
 (def get-all-savings-goals-schema<-
   (m/schema [:map [:body [:map [:savingsGoalList [:sequential entity/SavingsGoalV2]]]]]))
