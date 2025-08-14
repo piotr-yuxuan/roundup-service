@@ -9,8 +9,7 @@
    [next.jdbc.result-set :as rs]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
   (:import
-   (com.zaxxer.hikari HikariDataSource)
-   (java.time LocalDate)))
+   (com.zaxxer.hikari HikariDataSource)))
 
 (def RoundupJobExecution
   (m/schema
