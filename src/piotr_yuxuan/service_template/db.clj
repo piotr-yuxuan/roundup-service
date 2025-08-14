@@ -35,6 +35,7 @@
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
 
 (defn insert-roundup-job!
+  "Create a new recors, returning the full record as from the database."
   [{::keys [datasource] :query/keys [insert-job-execution]} {:keys [account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week] :as round-up-job}]
   (when-let [error (m/explain RoundupJobExecution round-up-job)]
     (throw (ex-info "Unexpected values" {:round-up-job round-up-job
@@ -46,7 +47,9 @@
       first))
 
 (defn update-roundup-job!
-  "Write all columns considered as a PUT, not a partial write as a PATCH."
+  "Update record fields, returning the whole record from the database.
+  Write all columns considered as a `PUT`, not a partial write as a
+  `PATCH`."
   [{::keys [datasource] :query/keys [update-job-execution]} {:keys [savings-goal-uid round-up-amount-in-minor-units status account-uid calendar-year calendar-week] :as round-up-job}]
   (when-let [error (m/explain RoundupJobExecution round-up-job)]
     (throw (ex-info "Unexpected values" {:round-up-job round-up-job
@@ -60,6 +63,7 @@
     record))
 
 (defn find-roundup-job
+  "Retrieve record from database, return it or `nil` if not found."
   [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week]}]
   (-> datasource
       (jdbc/execute!
@@ -102,3 +106,7 @@
               :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
               :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
        (doto migrate))))
+
+(comment
+  (require '[piotr-yuxuan.service-template.config :as config])
+  (user/restart user/app (assoc (config/load-config []) ::db/migrate? true)))
