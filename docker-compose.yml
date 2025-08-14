@@ -9,12 +9,15 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: database
+      PGDATA: /var/lib/postgresql/18/data
     ports:
       - "5432:5432"
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     volumes:
+      # Look at `SHOW data_directory;`
       - ./dev-resources/pg_data:/var/lib/postgresql/18/data
       - ./dev-resources/initdb:/docker-entrypoint-initdb.d
+      - ./dev-resources/postgresql.conf:/var/lib/postgresql/18/docker/postgresql.conf
       - ./dev-resources/postgresql.conf:/etc/postgresql/postgresql.conf
 
   adminer:
