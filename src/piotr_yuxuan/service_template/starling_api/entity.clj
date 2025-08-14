@@ -1,6 +1,20 @@
 (ns piotr-yuxuan.service-template.starling-api.entity
   "Only keep the attributes that are interesting to us."
-  (:require [malli.core :as m]))
+  (:require
+   [clojure.test.check.generators :as gen]
+   [malli.core :as m]))
+
+(def NonNegInt
+  (m/schema
+   [:and {:gen/gen (gen/one-of [(gen/large-integer* {:min 0})
+                                (gen/fmap bigdec (gen/large-integer* {:min 0}))])}
+    number?
+    [:fn (fn [x]
+           (cond
+             (and (int? x) (<= 0 x)) true
+             (instance? java.math.BigDecimal x) (and (zero? (.scale ^BigDecimal x))
+                                                     (<= 0 (.intValue x)))
+             :else false))]]))
 
 (def Currency
   (m/schema

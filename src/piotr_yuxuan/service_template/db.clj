@@ -8,19 +8,10 @@
    [next.jdbc.connection :as connection]
    [next.jdbc.result-set :as rs]
    [next.jdbc.types :refer [as-other]]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]])
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
+   [piotr-yuxuan.service-template.starling-api.entity :as entity])
   (:import
-   (com.zaxxer.hikari HikariDataSource)
-   (java.math BigDecimal)))
-
-(def non-neg-value?
-  (m/schema
-   [:fn (fn [x]
-          (cond
-            (and (int? x) (<= 0 x)) true
-            (instance? java.math.BigDecimal x) (and (zero? (.scale ^BigDecimal x))
-                                                    (pos? (.intValue x)))
-            :else false))]))
+   (com.zaxxer.hikari HikariDataSource)))
 
 (def RoundupJobExecution
   (m/schema
@@ -28,9 +19,9 @@
     [:id {:optional true} uuid?]
     [:account-uid uuid?]
     [:savings-goal-uid {:optional true} [:maybe uuid?]]
-    [:round-up-amount-in-minor-units {:optional true} non-neg-value?]
-    [:calendar-year non-neg-value?]
-    [:calendar-week non-neg-value?]
+    [:round-up-amount-in-minor-units {:optional true} entity/NonNegInt]
+    [:calendar-year entity/NonNegInt]
+    [:calendar-week entity/NonNegInt]
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
 
 (defn insert-roundup-job!

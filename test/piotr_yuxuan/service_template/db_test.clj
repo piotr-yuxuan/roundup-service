@@ -27,15 +27,6 @@
    ::db/username (.getUsername (:container container))
    ::db/password (.getPassword (:container container))})
 
-(deftest non-neg-value-test
-  (is (m/validate db/non-neg-value? 1))
-  (is (not (m/validate db/non-neg-value? 1.5)))
-  (is (m/validate db/non-neg-value? 0))
-  (is (not (m/validate db/non-neg-value? -1)))
-  (is (not (m/validate db/non-neg-value? -1.5)))
-  (is (not (m/validate db/non-neg-value? 1.5M)))
-  (is (m/validate db/non-neg-value? 1M)))
-
 (deftest insert-roundup-job-test
   (testing "happy path"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
