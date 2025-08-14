@@ -18,29 +18,16 @@
   (testing "happy path, one account"
     (let [token (mg/generate [:string {:min 10 :max 15}])
           api-base (mg/generate [:string {:min 10 :max 15}])
+          expected (mg/generate entity/Account)
           expected-request {:method :get
                             :url (str/join "/" [api-base "v2/accounts"])
                             :headers {"accept" "application/json"
-                                      "authorization" (str "Bearer " token)}}
-          expected-account (mg/generate entity/Account)]
-      (with-redefs [st.http/-request->response (fn [request]
-                                                 (is (= expected-request request))
-                                                 {:status http-status/ok
-                                                  :body {:accounts [(m/encode entity/Account expected-account mt/json-transformer)]}})]
-        (is (= (ok [expected-account])
-               (ops/get-accounts
-                {::ops/api-base api-base}
-                {:token token}))))))
-  (testing "auth issue"
-    (let [token (mg/generate [:string {:min 10 :max 15}])
-          api-base (mg/generate [:string {:min 10 :max 15}])]
-      (with-redefs [st.http/-request->response (constantly
-                                                {:status http-status/forbidden
-                                                 :body {:error_description "Could not validate provided access token"
-                                                        :error "invalid_token"}})]
-        (is (= (error {:body {:error_description "Could not validate provided access token",
-                              :error "invalid_token"},
-                       :status 403})
+                                      "authorization" (str "Bearer " token)}}]
+      (with-redefs [st.http/request->response (fn [_ _ request]
+                                                (is (= expected-request request))
+                                                {:status http-status/ok
+                                                 :body {:accounts [expected]}})]
+        (is (= [expected]
                (ops/get-accounts
                 {::ops/api-base api-base}
                 {:token token})))))))

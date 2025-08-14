@@ -20,10 +20,11 @@
                  :url (str/join "/" [api-base "v2/accounts"])
                  :headers {"accept" "application/json"
                            "authorization" (str "Bearer " token)}}]
-    (bind (st.http/request->response auth-schema->
-                                     get-accounts-schema<-
-                                     request)
-          (comp ok :accounts :body))))
+    (->> request
+         (st.http/request->response auth-schema->
+                                    get-accounts-schema<-)
+         :body
+         :accounts)))
 
 (def get-feed-transactions-between-schema->
   (m/schema [:map
