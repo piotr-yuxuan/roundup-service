@@ -2,7 +2,7 @@
   (:require
    [malli.util :as mu]
    [muuntaja.core :as m]
-   [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
+   [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
@@ -18,7 +18,14 @@
    [ring.adapter.jetty :as jetty]
    [ring.middleware.authorization :as authorization]
    [ring.middleware.reload :as reload]
-   [ring.util.http-status :as http-status]))
+   [ring.util.http-status :as http-status])
+  (:import
+   (org.eclipse.jetty.server Server)))
+
+(defmethod close! Server
+  [x]
+  (println ::close)
+  (.stop ^Server x))
 
 (defn routes
   [config]
@@ -96,10 +103,10 @@
 
 (defn start
   ([config]
-   (let [server (jetty/run-jetty (fn [request]
-                                   ((reload/wrap-reload (->handler config)) request))
-                                 {:port 3000
-                                  :join? false})]
-     (println "server running in port 3000")
-     (closeable-map*
+   (closeable-map*
+    (let [server (jetty/run-jetty (fn [request]
+                                    ((reload/wrap-reload (->handler config)) request))
+                                  {:port 3000
+                                   :join? false})]
+      (println "server running in port 3000")
       (assoc config ::server server)))))
