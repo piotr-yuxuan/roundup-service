@@ -24,7 +24,6 @@
 
 (defmethod close! Server
   [x]
-  (println ::close)
   (.stop ^Server x))
 
 (defn routes
