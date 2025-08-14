@@ -16,8 +16,8 @@
    [:map
     [:id {:optional true} uuid?]
     [:account-uid [:maybe uuid?]]
-    [:savings-goal-uid [:maybe uuid?]]
-    [:round-up-amount-in-minor-units pos-int?]
+    [:savings-goal-uid {:optional true} [:maybe uuid?]]
+    [:round-up-amount-in-minor-units {:optional true} pos-int?]
     [:calendar-year [:maybe pos-int?]]
     [:calendar-week [:maybe pos-int?]]
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
