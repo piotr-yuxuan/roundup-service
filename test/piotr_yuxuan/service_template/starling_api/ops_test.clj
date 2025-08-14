@@ -105,7 +105,33 @@
                   :account-uid account-uid})
                 seq nil?))))))
 
-;; (deftest put-create-a-savings-goal-testt)
+(deftest put-create-a-savings-goal-test
+  (let [api-base (mg/generate [:string {:min 10 :max 15}])
+        savings-goal-name (mg/generate [:string {:min 10 :max 15}])
+        savings-goal-currency (mg/generate entity/Currency)
+        token (mg/generate [:string {:min 10 :max 15}])
+        account-uid (UUID/randomUUID)]
+    (testing "creating a saving goal"
+      (let [body (->> ops/put-create-a-savings-goal-schema<- mg/generate :body)
+            expected-request {:method :put
+                              :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
+                              :headers {"accept" "application/json"
+                                        "content-type" "application/json"
+                                        "authorization" (str "Bearer " token)}
+                              :body {:name savings-goal-name
+                                     :currency savings-goal-currency}}]
+        (with-redefs [st.http/request->response
+                      (fn [_ _ request]
+                        (is (= expected-request request))
+                        {:status http-status/ok
+                         :body body})]
+          (is (= body
+                 (ops/put-create-a-savings-goal
+                  {::ops/api-base api-base}
+                  {:token token
+                   :account-uid account-uid
+                   :savings-goal-name savings-goal-name
+                   :savings-goal-currency savings-goal-currency}))))))))
 
 ;; (deftest get-one-savings-goal-testt)
 

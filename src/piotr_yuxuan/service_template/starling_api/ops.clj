@@ -81,18 +81,18 @@
                      [:success :boolean]]]]))
 
 (defn put-create-a-savings-goal
-  [{::keys [api-base]} {:keys [token account-uid]}]
+  [{::keys [api-base]} {:keys [token account-uid savings-goal-name savings-goal-currency]}]
   (let [request {:method :put
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
                  :headers {"accept" "application/json"
                            "content-type" "application/json"
                            "authorization" (str "Bearer " token)}
-                 :body {:name "Round it up!"
-                        :currency "GBP"}}]
-    (bind (st.http/request->response put-create-a-savings-goal-schema->
-                                     put-create-a-savings-goal-schema<-
-                                     request)
-          (comp ok :body))))
+                 :body {:name savings-goal-name
+                        :currency savings-goal-currency}}]
+    (->> request
+         (st.http/request->response put-create-a-savings-goal-schema->
+                                    put-create-a-savings-goal-schema<-)
+         :body)))
 
 (defn delete-a-savings-goal
   [{::keys [api-base]} {:keys [token account-uid savings-goal-uid]}]
