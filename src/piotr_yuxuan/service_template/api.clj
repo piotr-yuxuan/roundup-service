@@ -1,15 +1,16 @@
 (ns piotr-yuxuan.service-template.api
   (:require
+   [clojure.java.io :as io]
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
+   [piotr-yuxuan.service-template.exception :as st.exception]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
    [reitit.ring.malli]
-   [reitit.ring.middleware.exception :as exception]
    [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
