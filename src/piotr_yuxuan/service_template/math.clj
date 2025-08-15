@@ -1,13 +1,14 @@
 (ns piotr-yuxuan.service-template.math
+  (:require
+   [malli.core :as m])
   (:import
    (java.math BigDecimal RoundingMode)))
 
-(defn bankers-rounding
-  "Too bad we just have to round up to the nearest integer above."
-  [^long n]
-  (-> (BigDecimal/valueOf n)
-      (.setScale -2 RoundingMode/HALF_EVEN)
-      (.longValueExact)))
+(def NonNegInt64-max 9223372036854775807)
+
+(def NonNegInt64
+  (m/schema
+   [:int {:min 0 :max NonNegInt64-max}]))
 
 (defn round-up-difference
   "Returns how much needs to be added to `n` to round it up to the given

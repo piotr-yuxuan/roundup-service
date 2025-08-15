@@ -10,8 +10,8 @@
    [next.jdbc.result-set :as rs]
    [next.jdbc.types :refer [as-other]]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
-   [piotr-yuxuan.service-template.starling-api.entity :as entity]
-   [piotr-yuxuan.service-template.exception :as st.exception])
+   [piotr-yuxuan.service-template.exception :as st.exception]
+   [piotr-yuxuan.service-template.math :refer [NonNegInt64]])
   (:import
    (com.zaxxer.hikari HikariDataSource)))
 
@@ -21,9 +21,9 @@
     [:id {:optional true} uuid?]
     [:account-uid uuid?]
     [:savings-goal-uid {:optional true} [:maybe uuid?]]
-    [:round-up-amount-in-minor-units {:optional true} [:maybe entity/NonNegInt]]
-    [:calendar-year entity/NonNegInt]
-    [:calendar-week entity/NonNegInt]
+    [:round-up-amount-in-minor-units {:optional true} [:maybe NonNegInt64]]
+    [:calendar-year NonNegInt64]
+    [:calendar-week NonNegInt64]
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
 
 (defn insert-roundup-job!

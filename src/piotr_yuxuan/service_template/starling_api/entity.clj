@@ -1,20 +1,8 @@
 (ns piotr-yuxuan.service-template.starling-api.entity
   "Only keep the attributes that are interesting to us."
   (:require
-   [clojure.test.check.generators :as gen]
-   [malli.core :as m]))
-
-(def NonNegInt
-  (m/schema
-   [:and {:gen/gen (gen/one-of [(gen/large-integer* {:min 0})
-                                (gen/fmap bigdec (gen/large-integer* {:min 0}))])}
-    number?
-    [:fn (fn [x]
-           (cond
-             (and (int? x) (<= 0 x)) true
-             (instance? java.math.BigDecimal x) (and (zero? (.scale ^BigDecimal x))
-                                                     (<= 0 (.intValue x)))
-             :else false))]]))
+   [malli.core :as m]
+   [piotr-yuxuan.service-template.math :refer [NonNegInt64]]))
 
 (def Currency
   (m/schema
@@ -35,7 +23,7 @@
    [:map {:closed true}
     ;; Why is this a string in transactions-between, but an enum in Account?
     [:currency Currency]
-    [:minorUnits NonNegInt]]))
+    [:minorUnits NonNegInt64]]))
 
 (def FeedItem
   (m/schema

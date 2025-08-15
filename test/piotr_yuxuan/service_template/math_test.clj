@@ -1,8 +1,28 @@
 (ns piotr-yuxuan.service-template.math-test
   (:require
    [clojure.test :refer [deftest is testing]]
-   [piotr-yuxuan.service-template.math :refer [round-up-difference]]
-   [reitit.ring.malli]))
+   [malli.core :as m]
+   [piotr-yuxuan.service-template.math :refer [NonNegInt64 NonNegInt64-max
+                                               round-up-difference]]
+   [reitit.ring.malli])
+  (:import
+   (java.lang IllegalArgumentException)))
+
+(deftest NonNegInt64-test
+  (is (m/validate NonNegInt64 1))
+  (is (not (m/validate NonNegInt64 1.5)))
+  (is (m/validate NonNegInt64 0))
+  (is (not (m/validate NonNegInt64 -1)))
+  (is (not (m/validate NonNegInt64 -1.5)))
+
+  (testing "standard Clojure numerics and API"
+    (is (m/validate (m/schema NonNegInt64) (long 1513311315315361536)))
+    (is (m/validate (m/schema NonNegInt64) (int 15133113)))
+    (is (m/validate (m/schema NonNegInt64) (long 15133113))))
+  (testing "Does not autobox"
+    (is (not (m/validate (m/schema NonNegInt64) (inc (bigint NonNegInt64-max)))))
+    (is (not (m/validate (m/schema NonNegInt64) (bigdec 1))))
+    (is (not (m/validate (m/schema NonNegInt64) (bigint 1))))))
 
 (deftest hardcoded-test-from-assignment
   (let [expected 1.58M]
