@@ -122,4 +122,6 @@
 
 (comment
   (require '[piotr-yuxuan.service-template.config :as config])
+  (migratus/create (migration-config @user/app) "")
+  (migratus/migrate (migration-config (assoc @user/app ::migrate? true)))
   (user/restart user/app (assoc (config/load-config []) ::migrate? true)))
