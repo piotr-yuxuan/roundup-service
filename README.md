@@ -34,8 +34,12 @@ would redesign the code around the use
 
 ## Getting started
 
-- Build the slim Docker image
+- Run tests
+``` zsh
+clojure -X:test/env:test/run
+```
 
+- Build the Docker image
 ``` zsh
 VERSION=$(cat resources/service-template.version | tr -d '\n\r')
 
@@ -46,18 +50,19 @@ docker buildx build \
   .
 ```
 
-- Run it
-
+- Run it as a Docker container
 ``` zsh
 docker run \
-  --network service-template_default
+  --network service-template_default \
+  -p 3000:3000 \
   localhost/com.github.piotr-yuxuan.service-template:$(cat resources/service-template.version | tr -d '\n\r') \
-  --help
+  --db-hostname postgres
 ```
 
 Find the network in `docker network ls`. Any option appended at the
 end of the command line above is passed down to the uberjar. Remove
-the `--help` to get it running.
+the `--help` to get it running instead of just displaying the CLI help
+and exit.
 
 ## Development
 
