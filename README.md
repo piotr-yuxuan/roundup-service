@@ -14,6 +14,18 @@
 > then be transferred into a savings goal, helping the customer save
 > for future adventures.
 
+### Choice of language
+
+I really enjoyed my first interview during which we dived into my
+experience of the JVM, Python, Java, and Clojure. As it happened, we
+talked about
+[closeable-map](https://cljdoc.org/d/piotr-yuxuan/closeable-map), a
+macro-heavy personal project I designed.
+
+Since the recruiter I got in touch with confirmed that I could use any
+language, I thought that I would follow up in this take-home task and
+demonstrate this application state management library.
+
 ### Choice of numeric type
 
 ~I initially picked up FLOAT and it was fine~… no, of course I was
