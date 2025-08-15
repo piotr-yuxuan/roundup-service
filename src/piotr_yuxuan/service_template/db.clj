@@ -32,7 +32,6 @@
   (let [prepared-parameters [:account-uid :savings-goal-uid :round-up-amount-in-minor-units :calendar-year :calendar-week]]
     (when-let [error (-> RoundupJobExecution
                          (mu/select-keys prepared-parameters)
-                         (mu/update-properties assoc :closed true)
                          (m/explain round-up-job))]
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:round-up-job round-up-job
@@ -52,7 +51,6 @@
     (when-let [error (-> RoundupJobExecution
                          (mu/select-keys prepared-parameters)
                          mu/required-keys
-                         (mu/update-properties assoc :closed true)
                          (m/explain round-up-job))]
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:round-up-job round-up-job
@@ -73,7 +71,6 @@
     (when-let [error (-> RoundupJobExecution
                          (mu/select-keys prepared-parameters)
                          mu/required-keys
-                         (mu/update-properties assoc :closed true)
                          (m/explain args))]
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:args args
