@@ -56,11 +56,11 @@
                                               :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                               :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                               :round-up-amount-in-minor-units 1234})
-              expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
-                        :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
-                        :round-up-amount-in-minor-units 1234M,
-                        :calendar-year 2025,
-                        :calendar-week 32,
+              expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                        :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                        :round-up-amount-in-minor-units 1234
+                        :calendar-year 2025
+                        :calendar-week 32
                         :status "running"}]
           (is (contains? record :last-update-at))
           (is (contains? record :id))
@@ -78,14 +78,14 @@
                                                               :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                               :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                               :round-up-amount-in-minor-units 1234})))]
-        (is (= (ex-data ex)
-               {:type ::st.exception/short-circuit
+        (is (= {:type ::st.exception/short-circuit
                 :body {:round-up-job {:calendar-week 32
                                       :calendar-year "bad"
                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                       :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                       :round-up-amount-in-minor-units 1234}
-                       :explanation {:calendar-year ["should be a number" "unknown error"]}}}))))))
+                       :explanation {:calendar-year ["should be an integer"]}}}
+               (ex-data ex)))))))
 
 (deftest update-roundup-job-test
   (testing "no records found"
@@ -145,7 +145,7 @@
                                                 :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                 :status "running"})
                 :round-up-amount-in-minor-units
-                (= 1234M)))))))
+                (= 1234)))))))
 
 (deftest find-roundup-job-test
   (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
