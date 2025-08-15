@@ -8,8 +8,6 @@
    (java.time Period Year ZoneId)
    (java.time.temporal WeekFields)))
 
-
-
 (defn year+week-number->interval
   "Given ISO year and week number, returns a `[start end)` tuple for
   that week. The period is P7D (7 days), representing a
