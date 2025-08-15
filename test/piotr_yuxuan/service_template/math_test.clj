@@ -25,6 +25,13 @@
     (is (not (m/validate (m/schema NonNegInt64) (bigint 1))))))
 
 (deftest hardcoded-test-from-assignment
+  (testing "no float, no double"
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Unsupported type for n: class java.lang.Float"
+                          (round-up-difference 0 (float 1.58))))
+    (is (thrown-with-msg? IllegalArgumentException
+                          #"Unsupported type for n: class java.lang.Double"
+                          (round-up-difference 0 (double 1.58)))))
   (testing "with longs"
     (is (->> [435 520 87]
              (map (comp (partial round-up-difference 2) long))

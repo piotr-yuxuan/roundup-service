@@ -15,6 +15,14 @@
   scale. `scale` is the power of 10 digit to round to (e.g. 2 =
   hundreds). If `n` is already rounded, returns 0."
   ^long [scale n]
+  (when-not (contains? #{Long Integer} (type scale))
+    (throw (IllegalArgumentException.
+            (str "Unsupported type for scale: " (type scale)))))
+
+  (when-not (contains? #{Long Integer} (type n))
+    (throw (IllegalArgumentException.
+            (str "Unsupported type for n: " (type n)))))
+
   (let [rounded-n (loop [i 0 acc 1]
                     (if (< i scale)
                       (recur (inc i) (* acc 10))
