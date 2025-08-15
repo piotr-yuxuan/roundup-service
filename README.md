@@ -14,6 +14,35 @@
 > then be transferred into a savings goal, helping the customer save
 > for future adventures.
 
+For simplicity we make the following assumptions:
+
+- We consider that a week starts on a Monday.
+- We understand that the user will input a calendar week.
+- The input week is in the past, but that is a business requirement
+  that could be changed.
+- We only consider settled outgoing transactions on the default
+  category (**not** *spending category*) of the primary account first
+  created.
+- We allow only one round-up job per calendar week and per account.
+  This job may be retried if not in a terminal state (failed,
+  success), for example if they were insufficient funds when the
+  transfer was attempted.
+- Rounding up over non-overlapping periods in the past allows to keep
+  the design simple. However, maybe a next iteration would be to allow
+  overlapping round-ups so we can catch transactions that have been
+  settled between two executions.
+- We acknowledge the path =/api/v2/feed/account/{accountUid}/round-up=
+  for operations on the account round-up goal. However, the assignment
+  mentions a transfer to a savings goal. We consider this task about a
+  new implementation, not using this existing feature.
+- Since the API offers no obvious paging mechanism, we consider that
+  retrieving the feed of transactions is always going to return
+  reasonable payload of a manageable size.
+- We round up all the settled transactions for a week and transfer
+  this amount to one savings goal. The OpenAPI spec describes the
+  entity =FeedItem= with attribute =roundUp= of type
+  =AssociatedFeedRoundUp= but there are no obvious endpoints
+
 ### Choice of language
 
 I really enjoyed my first interview during which we dived into my
