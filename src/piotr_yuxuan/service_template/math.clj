@@ -1,17 +1,20 @@
 (ns piotr-yuxuan.service-template.math
+  "Tough math for sum :)"
   (:require
-   [malli.core :as m])
-  (:import
-   (java.math BigDecimal RoundingMode)))
+   [malli.core :as m]))
 
-(def NonNegInt64-max 9223372036854775807)
+(def NonNegInt64-max
+  "Define the maximum value for a non-negative 64-bit integer (2^63-1)."
+  9223372036854775807)
 
 (def NonNegInt64
+  "Validate a number as a non-negative 64-bit integer within the range 0
+  to `NonNegInt64-max.`"
   (m/schema
    [:int {:min 0 :max NonNegInt64-max}]))
 
 (defn round-up-difference
-  "Returns how much needs to be added to `n` to round it up to the given
+  "Return how much needs to be added to `n` to round it up to the given
   scale. `scale` is the power of 10 digit to round to (e.g. 2 =
   hundreds). If `n` is already rounded, returns 0."
   ^long [scale n]
