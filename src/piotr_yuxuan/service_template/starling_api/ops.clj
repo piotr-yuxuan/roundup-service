@@ -123,7 +123,7 @@
 (def get-confirmation-of-funds-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
-             [:query-params [:map [:targetAmountInMinorUnits :int]]]]))
+             [:query-params [:map [:targetAmountInMinorUnits entity/NonNegInt]]]]))
 
 (def get-confirmation-of-funds-schema<-
   (m/schema [:map
