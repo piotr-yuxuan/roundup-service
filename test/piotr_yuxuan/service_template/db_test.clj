@@ -7,7 +7,6 @@
    [piotr-yuxuan.service-template.exception :as st.exception])
   (:import
    (clojure.lang ExceptionInfo)
-   (org.postgresql.util PSQLException)
    (org.testcontainers.containers PostgreSQLContainer)))
 
 (defmethod close! PostgreSQLContainer
