@@ -21,7 +21,7 @@
     [:id {:optional true} uuid?]
     [:account-uid uuid?]
     [:savings-goal-uid {:optional true} [:maybe uuid?]]
-    [:round-up-amount-in-minor-units {:optional true} entity/NonNegInt]
+    [:round-up-amount-in-minor-units {:optional true} [:maybe entity/NonNegInt]]
     [:calendar-year entity/NonNegInt]
     [:calendar-week entity/NonNegInt]
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
