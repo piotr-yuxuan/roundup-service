@@ -4,6 +4,7 @@
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
+   [piotr-yuxuan.service-template.core :as core]
    [piotr-yuxuan.service-template.exception :as st.exception]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
@@ -42,11 +43,29 @@
    ["/api/v0" {:tags #{"Trigger round up"}
                :openapi {:security [{"bearer" []}]}}
     ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for the week starting Monday midnight."
-                                 :responses {200 {:body [:map [:secret :string]]}
-                                             401 {:body [:map [:error :string]]}}
-                                 :handler (constantly
-                                           {:status http-status/ok
-                                            :body {:secret "I am a little weasel"}})}}]]])
+                                 :parameters {:body [:map
+                                                     [:account-uid {:title "X parameter"
+                                                                    :description "Description for X parameter"
+                                                                    :json-schema/default #uuid "595a8a9e-14f8-43fa-a883-4391bfa6c23f"}
+                                                      :uuid]
+                                                     [:calendar-year {:title "X parameter"
+                                                                      :description "Description for X parameter"
+                                                                      :json-schema/default 2025}
+                                                      pos-int?]
+                                                     [:calendar-week {:title "X parameter"
+                                                                      :description "Description for X parameter"
+                                                                      :json-schema/default 33}
+                                                      [:int {:min 1 :max 53}]]
+                                                     [:savings-goal-name {:title "X parameter"
+                                                                          :description "Description for X parameter"
+                                                                          :json-schema/default "Round it up!"}
+                                                      [:string {:min 1 :max 100}]]]}
+                                 :responses {} ;; Populate with different error classes
+                                 :handler (fn [request]
+                                            (let [args (merge (-> request :parameters :body)
+                                                              (-> request :authorization (select-keys [:token])))]
+                                              {:status http-status/ok
+                                               :body (core/job config args)}))}}]]])
 
 (defn ->router
   [config]

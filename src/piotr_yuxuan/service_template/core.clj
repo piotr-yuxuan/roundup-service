@@ -1,9 +1,7 @@
 (ns piotr-yuxuan.service-template.core
   (:require
-   [malli.core :as m]
-   [malli.experimental.time :as met]
-   [malli.registry :as mr]
-   [piotr-yuxuan.service-template.railway :refer [bind error ok]]
+   [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.math :as st.math]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
    [reitit.ring.malli])
   (:import
@@ -11,97 +9,70 @@
    (java.time.temporal WeekFields)))
 
 
-(mr/set-default-registry!
- (mr/composite-registry
-  (m/default-schemas)
-  (met/schemas)))
 
 (defn year+week-number->interval
   "Given ISO year and week number, returns a `[start end)` tuple for
   that week. The period is P7D (7 days), representing a
   half-open [start, start+period) range. We consider that a week
   starts on Monday."
-  [^Year year week]
+  [^long year week]
   (let [week-fields (WeekFields/ISO)
-        start (-> (.atDay year 1)
+        start (-> (.atDay (Year/of year) 1)
                   (.with (.weekOfYear week-fields) week)
                   (.with (.dayOfWeek week-fields) 1) ;; Monday
                   (.atStartOfDay (ZoneId/systemDefault)))]
-    [start (.plus start (Period/ofWeeks 1))]))
+    {:min-timestamp (.toInstant start)
+     :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))}))
 
-(defn get-primary-account
-  [{:keys [config args] :as ctx}]
-  (let [accounts (starling-api/get-accounts config args)]
-    (if-let [primary-account (->> accounts
-                                  (filter (comp #{"PRIMARY"} :accountType))
-                                  (sort-by :createdAt)
-                                  first)]
-      (ok (-> ctx
-              (assoc :primary-account primary-account)
-              (update :args assoc
-                      :category-uid (:defaultCategory primary-account)
-                      :account-uid (:accountUid primary-account))))
-      (error {:step :get-primary-account
-              :reason "No primary account found"}))))
+(defn select-matching-savings-goal
+  [config {:keys [savings-goal-name] :as args}]
+  (->> (starling-api/get-all-savings-goals config args)
+       (filter (comp #{"ACTIVE"} :state))
+       (filter (comp #(= savings-goal-name %) :name))
+       (sort-by :savingsGoalUid) ;; Don't expect any implicit ordering from Starling API.
+       first))
 
-(defn get-feed-transactions
-  [{:keys [config args] :as ctx}]
-  (if-let [all-txs (seq (starling-api/get-settled-transactions-between
-                         config
-                         args))]
-    (ok (assoc ctx :all-txs all-txs))
-    (error {:step :get-feed-transactions
-            :reason "No transactions found"})))
+(defn job
+  [config {:keys [calendar-year calendar-week savings-goal-uid savings-goal-name] :as args}]
+  ;; The week should be in the past so we know that all transactions
+  ;; have completed. It is a wider problem to record the transactions
+  ;; we're rounded up.
+  (let [args (merge args (year+week-number->interval calendar-year calendar-week))
+        {:keys [accountUid currency]} (->> (starling-api/get-accounts config args)
+                                           (filter (comp #{"PRIMARY"} :accountType))
+                                           (sort-by :createdAt)
+                                           first)
+        args (assoc args :account-uid accountUid)
+        job-execution (or (db/find-roundup-job config args)
+                          (db/insert-roundup-job! config args))
 
-(defn filter-eligible-transactions
-  [{:keys [all-txs] :as ctx}]
-  (if-let [eligible-txs (->> all-txs
-                             (filter (comp #{"SETTLED"} :status))
-                             (filter (comp #{"OUT"} :direction))
-                             seq)]
-    (ok (assoc ctx :eligible-txs eligible-txs))
-    (error {:step :filter-eligible-transactions
-            :reason "No eligible transactions"})))
+        ;; Record the savings goal UID.
+        job-execution (->> (or (:savings-goal-uid job-execution)
+                               ;; If given a savings-goal-uid we expect to use it, or we fail.
+                               (and savings-goal-uid (:savings-goal-uid (starling-api/get-one-savings-goal config args)))
+                               ;; Else, if given a name we consider it.
+                               (and savings-goal-name (:savingsGoalUid (select-matching-savings-goal config args)))
+                               ;; Otherwise, we create a savings
+                               (:savingsGoalUid (starling-api/put-create-a-savings-goal config args)))
 
-(defn get-savings-goal
-  [{:keys [config args] :as ctx}]
-  (if-let [savings-goal (->> (starling-api/get-all-savings-goals config args)
-                             (filter (comp #{"ACTIVE"} :state))
-                             (sort-by :savingsGoalUid)
-                             first)]
-    (ok (update ctx :args assoc :savings-goal savings-goal))
-    (error {:step :get-savings-goal :reason "No active savings goal found"})))
+                           (assoc job-execution :savings-goal-uid)
+                           (db/update-roundup-job! config))
 
-(defn get-confirmation-of-funds
-  [{:keys [config args] :as ctx}]
-  (if-let [confirmation (starling-api/get-confirmation-of-funds
-                         config
-                         (assoc args :target-amount (-> ctx :round-up-amount :minorUnits)))]
-    (ok (assoc ctx :confirmation confirmation))
-    (error {:step :confirmation-of-funds :reason "Failed to confirm funds"})))
+        ;; Record the round-up amount at this point in time.
+        {:keys [savings-goal-uid transfer-uid round-up-amount-in-minor-units] :as job-execution}
+        (->> args
+             (starling-api/get-settled-transactions-between config)
+             (filter (comp #{"SETTLED"} :status))
+             (filter (comp #{"OUT"} :direction))
+             (map (comp (partial st.math/round-up-difference 2) :minorUnits :sourceAmount))
+             (reduce +)
+             (assoc job-execution :round-up-amount-in-minor-units)
+             (db/update-roundup-job! config))
 
-(defn add-money-to-saving-goal
-  [{:keys [config args] :as ctx}]
-  (if-let [response (starling-api/put-add-money-to-saving-goal
-                     config
-                     (assoc args
-                            :savings-goal-uid (-> args :savings-goal :savingsGoalUid)
-                            :amount (-> ctx :round-up-amount)))]
-    (ok (assoc ctx :transfer-status response))
-    (error {:step :add-money-to-saving-goal :reason "Transfer failed"})))
-
-(defn round-up
-  [config args]
-  (-> (ok {:config config
-           :args args})
-      (bind (fn [{:keys [config args] :as ctx}]
-              (-> (starling-api/get-accounts config args)
-                  (bind #(assoc ctx :accounts %)))))
-      (bind get-primary-account)
-      (bind get-feed-transactions)
-      ;(bind filter-eligible-transactions)
-      ;(bind calculate-round-up)
-      ;(bind get-savings-goal)
-      ;(bind get-confirmation-of-funds)
-      ;(bind add-money-to-saving-goal)
-      ))
+        confirmation-of-funds (starling-api/get-confirmation-of-funds config (assoc args :target-amount round-up-amount-in-minor-units))]
+    (starling-api/put-add-money-to-saving-goal config
+                                               (assoc args
+                                                      :transfer-uid transfer-uid
+                                                      :savings-goal-uid savings-goal-uid
+                                                      :amount {:currency currency
+                                                               :minorUnits round-up-amount-in-minor-units}))))
