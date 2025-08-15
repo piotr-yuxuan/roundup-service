@@ -127,7 +127,7 @@
                 {:token token
                  :account-uid account-uid
                  :savings-goal-name savings-goal-name
-                 :savings-goal-currency savings-goal-currency})))))))
+                 :currency savings-goal-currency})))))))
 
 (deftest get-one-savings-goal-test
   (let [api-base (mg/generate [:string {:min 10 :max 15}])
