@@ -1,5 +1,37 @@
 # `com.github.piotr-yuxuan/service-template`
 
+## Design choices
+
+### Choice of numeric type
+
+~I initially picked up FLOAT and it was fine~… no, of course I was
+conscious that inexact, variable-precision data types are recipe for
+disaster when handling money. I contemplated using both DECIMAL(12,0)
+and BIGINT in PostgreSQL:
+
+[PostgreSQL DECIMAL(12,0)](https://www.postgresql.org/docs/current/datatype-numeric.html)
+- Type: exact numeric with fixed precision and scale
+- Storage size: varies dynamically based on the number of digits; typically requires more storage than integer types.
+- Value range: from −999,999,999,999 to +999,999,999,999 (12 digits).
+
+[PostgreSQL BIGINT](https://www.postgresql.org/docs/current/datatype-numeric.html)
+ - Type: signed 64-bit integer
+ - Storage size: 8 bytes
+ - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+
+After careful comparison of Java numeric type API and datatypes, I've
+chosen to settles for long integers, as this precise type has
+conveniently the same value range as =BIGINT=.
+
+[Java long](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html)
+ - Type: signed 64-bit two's complement integer
+ - Storage size: 8 bytes
+ - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+
+If business required that we use so-called banker's rounding, then I
+would redesign the code around the use
+`java.math.RoundingMode/HALF_EVEN`.
+
 ## Getting started
 
 - Build the slim Docker image
