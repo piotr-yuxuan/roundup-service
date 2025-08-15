@@ -1,54 +1,61 @@
 {:paths ["src" "resources"]
- :deps {metosin/jsonista {:mvn/version "0.3.13"}
-        ring/ring-jetty-adapter {:mvn/version "1.14.2"}
-        ring/ring {:mvn/version "1.14.2"}
-        metosin/ring-swagger-ui {:mvn/version "5.20.0"}
-        ring/ring-headers {:mvn/version "0.4.0"}
-        com.brunobonacci/safely {:mvn/version "1.0.0"}
-        org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"}
-        metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]}
-        com.brunobonacci/mulog {:mvn/version "0.9.0"}
-        com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"}
-        ;; Do not use slf4j and don't bother about it.
-        org.slf4j/slf4j-nop {:mvn/version "2.0.17"}
-        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+ :deps { ;; Core language and utilities
+        org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself.
 
-        clj-http/clj-http {:mvn/version "3.13.1"} ; HTTP client
-        metosin/malli {:mvn/version "0.19.1"}
-        metosin/ring-http-response {:mvn/version "0.9.5" :exclusions [ring/ring-core]} ; No magic numbers for http statuses
+        ;; Web server and routing
+        ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
+        ring/ring-jetty-adapter {:mvn/version "1.14.2"} ; Jetty server adapter for Ring.
+        ring/ring-headers {:mvn/version "0.4.0"} ; Middleware for HTTP headers.
+        metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]} ; Fast, data-driven routing library.
+        metosin/ring-http-response {:mvn/version "0.9.5" :exclusions [ring/ring-core]} ; HTTP response helpers.
 
-        com.github.seancorfield/next.jdbc {:mvn/version "1.3.1048"}
-        org.postgresql/postgresql {:mvn/version "42.7.7"}
-        migratus/migratus {:mvn/version "1.6.4"}
-        com.zaxxer/HikariCP {:mvn/version "7.0.1"}
+        ;; API documentation & schema
+        metosin/malli {:mvn/version "0.19.1"} ; Data-driven schema library.
+        metosin/jsonista {:mvn/version "0.3.13"} ; High-performance JSON library.
+        metosin/ring-swagger-ui {:mvn/version "5.20.0"} ; Swagger UI integration for Ring.
+        org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"} ; Compare OpenAPI specifications.
 
-        ;; Configuration
-        piotr-yuxuan/closeable-map {:mvn/version "0.36.2"} ; A Clojure map that implements java.io.Closeable
-        com.github.piotr-yuxuan/malli-cli {:mvn/version "2.1.2"} ; Configuration value from the command-line
+        ;; Database and migrations
+        com.github.seancorfield/next.jdbc {:mvn/version "1.3.1048"} ; Modern JDBC wrapper.
+        org.postgresql/postgresql {:mvn/version "42.7.7"} ; PostgreSQL JDBC driver.
+        com.zaxxer/HikariCP {:mvn/version "7.0.1"} ; High-performance JDBC connection pool.
+        migratus/migratus {:mvn/version "1.6.4"} ; Database migration tool.
 
-        org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself
-        org.clojure/core.cache {:mvn/version "1.1.234"} ; Caching logic
+        ;; Networking & HTTP clients
+        clj-http/clj-http {:mvn/version "3.13.1"} ; HTTP client for Clojure.
+
+        ;; Logging & monitoring
+        com.brunobonacci/mulog {:mvn/version "0.9.0"} ; Structured logging and event data.
+        com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"} ; Advanced console output for μ/log.
+        org.slf4j/slf4j-nop {:mvn/version "2.0.17"} ; SLF4J no-op binding (disable logging).
+
+        ;; Reliability and error handling
+        com.brunobonacci/safely {:mvn/version "1.0.0"} ; Safe execution and error capture.
+
+        ;; Configuration tools
+        piotr-yuxuan/closeable-map {:mvn/version "0.36.2"} ; Closeable map for resource management.
+        com.github.piotr-yuxuan/malli-cli {:mvn/version "2.1.2"} ; CLI configuration values using Malli.
         }
  :aliases {:run/service {:main-opts ["-m" "piotr-yuxuan.service-template.main"]}
-           :test/env {}
+           :build {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}}}
+           :test/env {:extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
+                                   org.testcontainers/postgresql {:mvn/version "1.20.0"}}}
+           :dev/reloaded {:extra-paths ["."
+                                        "resources"
+                                        "dev" "dev-resources"
+                                        "test"]}
            :test/run {:extra-paths ["test"]
-                      :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}
-                                   clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-                                   org.testcontainers/postgresql {:mvn/version "1.20.0"}}
+                      :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
                       :main-opts ["-m" "kaocha.runner"]
                       :exec-fn kaocha.runner/exec-fn
-                      :exec-args {:randomize? false
-                                  :fail-fast? true}}
+                      :exec-args {}}
+           :test/watch {:exec-args {:watch? true
+                                    :randomize? true
+                                    :fail-fast? false}}
            :build/task {:replace-paths ["." "resources"]
                         :replace-deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}}
                         :ns-default build}
-           :cider/nrepl {:extra-paths ["."
-                                       "resources"
-                                       "dev" "dev-resources"
-                                       "test"]
-                         :extra-deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}
-                                      clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-                                      org.testcontainers/postgresql {:mvn/version "1.20.0"}}}
+           :cider/nrepl {}
            :repl {:extra-deps {nrepl/nrepl {:mvn/version "1.3.1"}
                                cider/cider-nrepl {:mvn/version "0.57.0"}}
                   :main-opts ["-m" "nrepl.cmdline"
