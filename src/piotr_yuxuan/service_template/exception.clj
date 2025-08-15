@@ -9,8 +9,9 @@
   [ex request]
   (let [ex-data (ex-data ex)]
     {:status (:status ex-data http-status/internal-server-error)
-     :body (:body ex-data {:message (or (ex-message ex) "Internal server error")
-                           :request (select-keys request [:request-method :uri :path-params :body-params])})}))
+     :body (-> ex-data
+               (:body {:request (select-keys request [:request-method :uri :path-params :body-params])})
+               (update :message #(or % (ex-message ex) "Internal server error")))}))
 
 (def exception-middleware
   (exception/create-exception-middleware
