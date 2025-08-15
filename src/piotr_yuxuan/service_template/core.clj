@@ -27,7 +27,8 @@
   (->> (starling-api/get-all-savings-goals config args)
        (filter (comp #{"ACTIVE"} :state))
        (filter (comp #(= savings-goal-name %) :name))
-       (sort-by :savingsGoalUid) ;; Don't expect any implicit ordering from Starling API.
+       ;; Don't expect any implicit ordering from Starling API.
+       (sort-by :savingsGoalUid)
        first))
 
 (defn job
