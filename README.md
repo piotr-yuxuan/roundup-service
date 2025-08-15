@@ -56,6 +56,28 @@ If business required that we use so-called banker's rounding, then I
 would redesign the code around the use
 `java.math.RoundingMode/HALF_EVEN`.
 
+## Notes on the Starling API
+
+It is very pleasing to see such a complete, robust, and consistent API
+that conforms to idiomatic REST style! Cognisant that this is a
+take-home assigment part of an interview process, I shall note a
+couple of observations that I'd be glad to fix on day 1 if allowed to
+:)
+
+- The description of the =GET= operation on
+  =/api/v2/feed/account/{accountUid}/round-up= contains « Returns
+  **the the** round-up goal »
+- The entity =Currency= is a string of minimum length 1 in
+  =CurrencyAndAmount= but an enum in Account.
+- We can't retrieve the settled transactions per spending category.
+- I'm not aware of a paging mechanism. I
+- This API is a solid level two in the [Richardson's maturity
+  model](https://restfulapi.net/richardson-maturity-model/) ranging
+  from zero to three. However, HATEOAS are missing. This means that
+  the API users don't really know what they may do with the
+  =defaultCategory= of the =AccountV2= instances from
+  =/api/v2/accounts=.
+
 ## Getting started
 
 - Run tests
