@@ -3,6 +3,7 @@
    [clojure.string :as str]
    [malli.core :as m]
    [piotr-yuxuan.service-template.http :as st.http]
+   [piotr-yuxuan.service-template.math :refer [NonNegInt64]]
    [piotr-yuxuan.service-template.openapi-spec :as openapi-spec]
    [piotr-yuxuan.service-template.starling-api.entity :as entity]
    [reitit.ring.malli]))
@@ -123,7 +124,7 @@
 (def get-confirmation-of-funds-schema->
   (m/schema [:map
              [:headers [:map ["authorization" [:re #"^Bearer\s+\S+$"]]]]
-             [:query-params [:map [:targetAmountInMinorUnits entity/NonNegInt]]]]))
+             [:query-params [:map [:targetAmountInMinorUnits NonNegInt64]]]]))
 
 (def get-confirmation-of-funds-schema<-
   (m/schema [:map
