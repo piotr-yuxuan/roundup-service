@@ -40,15 +40,10 @@
 (def FeedItem
   (m/schema
    [:map {:closed true}
-    [:feedItemUid :uuid]
-    [:categoryUid :uuid]
     [:amount CurrencyAndAmount]
-    [:sourceAmount CurrencyAndAmount]
+    [:categoryUid :uuid]
     [:direction [:enum "IN" "OUT"]]
-    [:updatedAt inst?]
-    [:transactionTime inst?]
-    [:settlementTime inst?]
-    [:retryAllocationUntilTime inst?]
+    [:feedItemUid :uuid]
     [:status [:enum "UPCOMING" "UPCOMING_CANCELLED" "PENDING", "REVERSED", "SETTLED", "DECLINED", "REFUNDED", "RETRYING", "ACCOUNT_CHECK"]]]))
 
 (def SavingsGoalV2
