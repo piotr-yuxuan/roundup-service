@@ -63,6 +63,7 @@
              (filter (comp #{"SETTLED"} :status))
              (filter (comp #{"OUT"} :direction))
              (map (comp (partial st.math/round-up-difference 2) :minorUnits :sourceAmount))
+             (map (comp (partial st.math/round-up-difference 2) :minorUnits :amount))
              (reduce +)
              (assoc job-execution :round-up-amount-in-minor-units)
              (db/update-roundup-job! config))
