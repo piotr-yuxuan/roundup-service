@@ -1,4 +1,9 @@
 (ns piotr-yuxuan.service-template.api
+  "Define the web API for the service, including routes, OpenAPI/Swagger
+  documentation, middleware for parameter coercion, content
+  negotiation, exception handling, and authorization. Provide
+  functions to build routers, handlers, and to start a Jetty server
+  serving the API."
   (:require
    [clojure.java.io :as io]
    [malli.util :as mu]
@@ -24,11 +29,14 @@
   (:import
    (org.eclipse.jetty.server Server)))
 
+;; Stop a Jetty server instance.
 (defmethod close! Server
   [x]
   (.stop ^Server x))
 
 (defn routes
+  "Define the API route structure, including OpenAPI and application
+  endpoints."
   [config]
   [["/openapi.json"
     {:get {:no-doc true
@@ -68,6 +76,8 @@
                                                :body (core/job config args)}))}}]]])
 
 (defn ->router
+  "Build a Ring router with middleware, coercion, and exception
+  handling."
   [config]
   (ring/router
    (routes config)
@@ -107,6 +117,7 @@
                         authorization/wrap-authorization]}}))
 
 (defn ->handler
+  "Create a Ring handler combining the router and Swagger UI endpoints."
   [config]
   (ring/ring-handler
    (->router config)
@@ -121,11 +132,13 @@
     (ring/create-default-handler))))
 
 (defn start
-  ([config]
-   (closeable-map*
+  "Launch a Jetty server with the API handler on port 3000 and return
+  the configuration with the server instance."
+  [config]
+  (closeable-map*
     (let [server (jetty/run-jetty (fn [request]
                                     ((reload/wrap-reload (->handler config)) request))
                                   {:port 3000
                                    :join? false})]
       (println "server running in port 3000")
-      (assoc config ::server server)))))
+      (assoc config ::server server))))
