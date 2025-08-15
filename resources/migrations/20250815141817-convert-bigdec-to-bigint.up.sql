@@ -1,0 +1,3 @@
+ALTER TABLE roundup_job_execution
+ALTER COLUMN round_up_amount_in_minor_units TYPE BIGINT
+USING round_up_amount_in_minor_units::BIGINT;
