@@ -44,7 +44,8 @@
           (is (contains? record :last-update-at))
           (is (contains? record :id))
           (is (contains? record :status))
-          (is (= expected (dissoc record :id :last-update-at))))))
+          (is (contains? record :transfer-uid))
+          (is (= expected (dissoc record :id :last-update-at :transfer-uid))))))
 
     (testing "with more optional columns"
       (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -65,7 +66,7 @@
           (is (contains? record :last-update-at))
           (is (contains? record :id))
           (is (contains? record :status))
-          (is (= expected (dissoc record :id :last-update-at)))))))
+          (is (= expected (dissoc record :id :last-update-at :transfer-uid)))))))
 
   (testing "bad argument"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -168,6 +169,7 @@
           (is (contains? actual :last-update-at))
           (is (contains? actual :id))
           (is (contains? actual :status))
+          (is (contains? actual :transfer-uid))
           (is (= expected (select-keys actual
                                        [:account-uid
                                         :calendar-year
