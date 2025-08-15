@@ -1,4 +1,7 @@
 (ns piotr-yuxuan.service-template.db
+  "Database access functions, schema validation, and lifecycle
+  management for round-up job execution records, including migrations
+  and connection pooling."
   (:require
    [clojure.java.io :as io]
    [malli.core :as m]
@@ -16,6 +19,9 @@
    (com.zaxxer.hikari HikariDataSource)))
 
 (def RoundupJobExecution
+  "Malli application-level schema defining the structure and constraints
+  of a round-up job execution record before it is inserted in the
+  database."
   (m/schema
    [:map
     [:id {:optional true} uuid?]
@@ -27,7 +33,8 @@
     [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
 
 (defn insert-roundup-job!
-  "Create a new recors, returning the full record as from the database."
+  "Validate and insert a new round-up job execution record into the
+  database, returning the inserted record."
   [{::keys [datasource] :query/keys [insert-job-execution]} {:keys [account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week] :as round-up-job}]
   (let [prepared-parameters [:account-uid :savings-goal-uid :round-up-amount-in-minor-units :calendar-year :calendar-week]]
     (when-let [error (-> RoundupJobExecution
@@ -43,9 +50,9 @@
       first))
 
 (defn update-roundup-job!
-  "Update record fields, returning the whole record from the database.
-  Write all columns considered as a `PUT`, not a partial write as a
-  `PATCH`."
+  "Validate and update all fields of an existing round-up job execution
+  record (`PUT` semantics, not `PATCH`), returning the updated record
+  or throwing if not found."
   [{::keys [datasource] :query/keys [update-job-execution]} {:keys [savings-goal-uid round-up-amount-in-minor-units status account-uid calendar-year calendar-week] :as round-up-job}]
   (let [prepared-parameters [:savings-goal-uid :round-up-amount-in-minor-units :status :account-uid :calendar-year :calendar-week]]
     (when-let [error (-> RoundupJobExecution
@@ -65,7 +72,9 @@
     record))
 
 (defn find-roundup-job
-  "Retrieve record from database, return it or `nil` if not found."
+  "Validate parameters and retrieve a round-up job execution record by
+  account UID, year, and week, returning the record or `nil` if
+  absent."
   [{::keys [datasource] :query/keys [select_job_execution_by_account_uid_calendar_year_and_week]} {:keys [account-uid calendar-year calendar-week] :as args}]
   (let [prepared-parameters [:account-uid :calendar-year :calendar-week]]
     (when-let [error (-> RoundupJobExecution
@@ -83,6 +92,8 @@
       first))
 
 (defn ->connection-pool
+  "Create and configure a `HikariDataSource` connection pool for
+  PostgreSQL using provided connection parameters."
   ^HikariDataSource [{::keys [hostname port dbname username password]}]
   (connection/->pool
    HikariDataSource
@@ -96,6 +107,8 @@
     :connectionTimeout (or 3000 :ms)}))
 
 (defn migration-config
+  "Return a Migratus configuration map for running database migrations
+  if migration is enabled in the config."
   [{::keys [datasource migrate?]}]
   (when migrate?
     {:managed-connection? true
@@ -103,11 +116,15 @@
      :db {:datasource datasource}}))
 
 (defn migrate
+  "Execute pending database migrations using the Migratus configuration
+  derived from the provided config."
   [config]
   (when-let [migration-config (migration-config config)]
     (migratus/migrate migration-config)))
 
 (defn start
+  "Return a closeable configuration map with an initialised datasource,
+  SQL query templates, and optionally runs migrations."
   [config]
   (closeable-map*
    (-> config
