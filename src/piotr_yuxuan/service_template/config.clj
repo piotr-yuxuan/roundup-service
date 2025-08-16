@@ -22,7 +22,9 @@
                 :short-option "-h"
                 :arg-number 0}]]
 
-    [::log/publishers [:sequential {:default log/default-publishers} :any]]
+    [::log/publisher-names [:set {:default #{:console-json :jvm-metrics :prometheus}} keyword?]]
+    [::log/prometheus-push-gateway [:string {:default "http://localhost:9091"}]]
+
     [::db/hostname [:string {:default "localhost", :long-option "--db-hostname"}]]
     [::db/port [pos-int? {:default 5432, :long-option "--db-port"}]]
     [::db/dbname [:string {:default "database", :long-option "--dbname"}]]
