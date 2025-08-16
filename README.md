@@ -127,13 +127,20 @@ docker buildx build \
 ```
 
 - Run it as a Docker container
+
 ``` zsh
+touch ./log.json
+
 docker run \
-  --network service-template_default \
-  -p 3000:3000 \
-  localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
-  --db-hostname postgres \
-  --show-config
+    --network service-template_default \
+    -p 3000:3000 \
+    --volume "$PWD/log.json":/app/log.json:rw \
+    localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
+    --db-hostname "postgres" \
+    --db-migrate \
+    --prometheus-push-url "http://pushgateway:9091" \
+    --zipkin-url "http://tempo:9411" \
+    --starling-url "https://api-sandbox.starlingbank.com/api"
 ```
 
 Any option appended at the end of the command line above is passed
