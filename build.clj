@@ -1,10 +1,11 @@
 (ns build
   "Build tasks:
-- `uberjar` packaged service for deployment
-- `clean` remove all build assets and jar files"
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
-            [clojure.tools.build.api :as build-api]))
+  - `uberjar` packaged service for deployment
+  - `clean` remove all build assets and jar files"
+  (:require
+   [clojure.java.io :as io]
+   [clojure.string :as str]
+   [clojure.tools.build.api :as build-api]))
 
 (defn dependency-mrjar?
   [^String jar-file]
@@ -26,7 +27,7 @@
        (filter dependency-mrjar?)))
 
 (def service-name
-  "service-template")
+  "starling-roundup-service")
 
 (defn version
   []
