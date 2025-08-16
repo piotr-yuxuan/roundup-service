@@ -29,6 +29,7 @@
         com.brunobonacci/mulog {:mvn/version "0.9.0"} ; Structured logging and event data.
         com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"} ; JSON console output for μ/log.
         com.brunobonacci/mulog-prometheus {:mvn/version "0.9.0"}
+        com.brunobonacci/mulog-adv-file {:mvn/version "0.9.0"}
         com.brunobonacci/mulog-jvm-metrics {:mvn/version "0.9.0"} ; Sample JVM metrics
         com.brunobonacci/mulog-zipkin {:mvn/version "0.9.0"}
         org.slf4j/slf4j-nop {:mvn/version "2.0.17"} ; SLF4J no-op binding (disable logging).
