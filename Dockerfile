@@ -15,7 +15,7 @@ RUN mkdir tmp-classes \
     && jar xf ../target/*.jar \
     && cd ..
 RUN $JAVA_HOME/bin/jlink \
-    --add-modules $(jdeps --multi-release 24 --ignore-missing-deps --print-module-deps tmp-classes) \
+    --add-modules $(jdeps --multi-release 24 --ignore-missing-deps --print-module-deps tmp-classes),jdk.zipfs \
     --strip-debug \
     --no-man-pages \
     --no-header-files \
