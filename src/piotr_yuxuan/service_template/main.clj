@@ -1,4 +1,8 @@
 (ns piotr-yuxuan.service-template.main
+  "Provide the main entry point for the service, including configuration
+  loading, validation, and orchestrating the startup of database,
+  Starling API, and web API components. Handle CLI options for
+  displaying help or printing configuration."
   (:gen-class)
   (:require
    [clojure.pprint :as pprint]
@@ -11,6 +15,8 @@
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
 
 (defn start
+  "Initialise and start all service components (database, Starling API,
+  web API) in a closeable context."
   [config]
   (closeable-map*
    (-> config
@@ -19,6 +25,9 @@
        api/start)))
 
 (defn -main
+  "Parse CLI arguments, validate and optionally display the
+  configuration, then start the service or exit based on provided
+  flags."
   [& args]
   (let [config (config/load-config args)]
     (cond (not (m/validate Config config))

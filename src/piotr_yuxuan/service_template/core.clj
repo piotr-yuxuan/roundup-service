@@ -23,14 +23,20 @@
      :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))}))
 
 (defn select-matching-savings-goal
+  "Retrieve the active savings goal matching a given name from Starling
+  API and return the first match."
   [config {:keys [savings-goal-name] :as args}]
   (->> (starling-api/get-all-savings-goals config args)
        (filter (comp #{"ACTIVE"} :state))
        (filter (comp #(= savings-goal-name %) :name))
-       (sort-by :savingsGoalUid) ;; Don't expect any implicit ordering from Starling API.
+       ;; Don't expect any implicit ordering from Starling API.
+       (sort-by :savingsGoalUid)
        first))
 
 (defn job
+  "Execute a round-up job for a specified week, including: retrieving
+  transactions, calculating the round-up amount, confirming funds, and
+  transferring the amount to the savings goal."
   [config {:keys [calendar-year calendar-week savings-goal-uid savings-goal-name] :as args}]
   ;; The week should be in the past so we know that all transactions
   ;; have completed. It is a wider problem to record the transactions

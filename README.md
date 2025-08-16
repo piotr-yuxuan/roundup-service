@@ -1,9 +1,120 @@
 # `com.github.piotr-yuxuan/service-template`
 
-## Getting started
+## Design choices
 
-- Build the slim Docker image
+### Assigment
 
+> We'd like you to develop a “round-up” feature for Starling customers
+> using our public developer API that is available to all customers
+> and partners.
+>
+> For a customer, take all the transactions in a given week and round
+> them up to the nearest pound. For example with spending of £4.35,
+> £5.20 and £0.87, the round-up would be £1.58. This amount should
+> then be transferred into a savings goal, helping the customer save
+> for future adventures.
+
+For simplicity we make the following assumptions:
+
+- We consider that a week starts on a Monday.
+- We understand that the user will input a calendar week.
+- The input week is in the past, but that is a business requirement
+  that could be changed.
+- We only consider settled outgoing transactions on the default
+  category (**not** *spending category*) of the primary account first
+  created.
+- We allow only one round-up job per calendar week and per account.
+  This job may be retried if not in a terminal state (failed,
+  success), for example if they were insufficient funds when the
+  transfer was attempted.
+- Rounding up over non-overlapping periods in the past allows to keep
+  the design simple. However, maybe a next iteration would be to allow
+  overlapping round-ups so we can catch transactions that have been
+  settled between two executions.
+- We acknowledge the path =/api/v2/feed/account/{accountUid}/round-up=
+  for operations on the account round-up goal. However, the assignment
+  mentions a transfer to a savings goal. We consider this task about a
+  new implementation, not using this existing feature.
+- Since the API offers no obvious paging mechanism, we consider that
+  retrieving the feed of transactions is always going to return
+  reasonable payload of a manageable size.
+- We round up all the settled transactions for a week and transfer
+  this amount to one savings goal. The OpenAPI spec describes the
+  entity =FeedItem= with attribute =roundUp= of type
+  =AssociatedFeedRoundUp= but there are no obvious endpoints
+
+### Choice of language
+
+I really enjoyed my first interview during which we dived into my
+experience of the JVM, Python, Java, and Clojure. As it happened, we
+talked about
+[closeable-map](https://cljdoc.org/d/piotr-yuxuan/closeable-map), a
+macro-heavy personal project I designed.
+
+Since the recruiter I got in touch with confirmed that I could use any
+language, I thought that I would follow up in this take-home task and
+demonstrate this application state management library.
+
+### Choice of numeric type
+
+~I initially picked up FLOAT and it was fine~… no, of course I was
+conscious that inexact, variable-precision data types are recipe for
+disaster when handling money. I contemplated using both DECIMAL(12,0)
+and BIGINT in PostgreSQL:
+
+[PostgreSQL DECIMAL(12,0)](https://www.postgresql.org/docs/current/datatype-numeric.html)
+- Type: exact numeric with fixed precision and scale
+- Storage size: varies dynamically based on the number of digits; typically requires more storage than integer types.
+- Value range: from −999,999,999,999 to +999,999,999,999 (12 digits).
+
+[PostgreSQL BIGINT](https://www.postgresql.org/docs/current/datatype-numeric.html)
+ - Type: signed 64-bit integer
+ - Storage size: 8 bytes
+ - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+
+After careful comparison of Java numeric type API and datatypes, I've
+chosen to settles for long integers, as this precise type has
+conveniently the same value range as =BIGINT=.
+
+[Java long](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html)
+ - Type: signed 64-bit two's complement integer
+ - Storage size: 8 bytes
+ - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+
+If business required that we use so-called banker's rounding, then I
+would redesign the code around the use
+`java.math.RoundingMode/HALF_EVEN`.
+
+## Notes on the Starling API
+
+It is very pleasing to see such a complete, robust, and consistent API
+that conforms to idiomatic REST style! Cognisant that this is a
+take-home assigment part of an interview process, I shall note a
+couple of observations that I'd be glad to fix on day 1 if allowed to
+:)
+
+- The description of the =GET= operation on
+  =/api/v2/feed/account/{accountUid}/round-up= contains « Returns
+  **the the** round-up goal »
+- The entity =Currency= is a string of minimum length 1 in
+  =CurrencyAndAmount= but an enum in Account.
+- We can't retrieve the settled transactions per spending category.
+- I'm not aware of a paging mechanism. I
+- This API is a solid level two in the [Richardson's maturity
+  model](https://restfulapi.net/richardson-maturity-model/) ranging
+  from zero to three. However, HATEOAS are missing. This means that
+  the API users don't really know what they may do with the
+  =defaultCategory= of the =AccountV2= instances from
+  =/api/v2/accounts=.
+
+## Getting started running this service
+
+- Run tests
+``` zsh
+clojure -X:test/env:test/run
+```
+
+- Build the Docker image
 ``` zsh
 VERSION=$(cat resources/service-template.version | tr -d '\n\r')
 
@@ -14,20 +125,55 @@ docker buildx build \
   .
 ```
 
-- Run it
-
+- Run it as a Docker container
 ``` zsh
 docker run \
-  --network service-template_default
+  --network service-template_default \
+  -p 3000:3000 \
   localhost/com.github.piotr-yuxuan.service-template:$(cat resources/service-template.version | tr -d '\n\r') \
-  --help
+  --db-hostname postgres \
+  --show-config
 ```
 
-Find the network in `docker network ls`. Any option appended at the
-end of the command line above is passed down to the uberjar. Remove
-the `--help` to get it running.
+Any option appended at the end of the command line above is passed
+down to the uberjar. Remove the `--show-config` to get it to actully
+run instead of just displaying the CLI help and exit.
 
-## Development
+### Prometheus (monitoring and alerting)
+
+- Browser URL: http://localhost:9090
+
+### Grafana (dashboard visualisation)
+
+- Browser URL: http://localhost:3001
+
+Grafana visualises the metrics collected by Prometheus with dashboards
+configured for PostgreSQL. Anonymous login is enabled with Admin
+rights for ease of access.
+
+### Postgres database
+
+- Browser URL: http://localhost:5431
+- CLI connection (from your local machine if `psql` is installed):
+
+``` zsh
+psql -h localhost -p 5432 -U user -d database
+```
+
+Default credentials are:
+- User: user
+- Password: password
+- Database: database
+
+From a repl you may create a new migration with:
+
+``` clojure
+(migratus/create config "create-user")
+```
+
+See the related namespace.
+
+## Getting started as a developer
 
 If you don't have Clojure toolchain installed on your machine,
 consider opening a REPL from within a vanilla Docker image and mount
@@ -66,13 +212,6 @@ This launches multiple services related to PostgreSQL, monitoring, and
 visualisation. Below are instructions to connect to each service
 either via CLI or through a web browser.
 
-### Postgres database
-
-- Browser URL: http://localhost:5431
-- CLI connection (from your local machine if `psql` is installed):
-
-``` zsh
-psql -h localhost -p 5432 -U user -d database
 ```
 
 Default credentials are:
@@ -85,15 +224,3 @@ From a repl you may create a new migration with:
 ``` clojure
 (migratus/create config "create-user")
 ```
-
-### Prometheus (monitoring and alerting)
-
-- Browser URL: http://localhost:9090
-
-### Grafana (dashboard visualisation)
-
-- Browser URL: http://localhost:3001
-
-Grafana visualises the metrics collected by Prometheus with dashboards
-configured for PostgreSQL. Anonymous login is enabled with Admin
-rights for ease of access.

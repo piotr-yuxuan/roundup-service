@@ -1,4 +1,8 @@
 (ns piotr-yuxuan.service-template.config
+  "Define and validate the application configuration schema, including
+  database connection parameters, Starling API settings, and CLI
+  options. Provide utilities to load and decode configuration from
+  command-line arguments or environment variables."
   (:require
    [malli.core :as m]
    [piotr-yuxuan.malli-cli :as malli-cli]
@@ -28,5 +32,7 @@
     [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api"}]]]))
 
 (defn load-config
+  "Parse and decode command-line arguments according to the
+  configuration schema, returning a validated configuration map."
   [args]
   (m/decode Config args malli-cli/cli-transformer))

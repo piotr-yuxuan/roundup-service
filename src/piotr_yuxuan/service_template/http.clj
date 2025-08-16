@@ -1,4 +1,8 @@
 (ns piotr-yuxuan.service-template.http
+  "Provide HTTP request and response utilities with JSON handling,
+  schema validation via Malli, and structured error handling. It
+  includes functions to encode request bodies, decode JSON responses,
+  and enforce schemas for both requests and upstream responses."
   (:require
    [clj-http.client :as http]
    [jsonista.core :as j]
@@ -16,6 +20,8 @@
    (com.fasterxml.jackson.core JsonParseException)))
 
 (defn write-json-body
+  "Convert the `:body` of a request map to a JSON string, returning a
+  400 error on malformed input."
   [{:keys [body] :as request}]
   (try
     (if body
@@ -26,6 +32,8 @@
        :body "Malformed JSON body"})))
 
 (defn read-json-body
+  "Parse the JSON `:body` of a response map into Clojure data, returning
+  a 500 error on malformed JSON."
   [{:keys [body] :as response}]
   (try
     (if (and (string? body) (seq body))
@@ -36,6 +44,8 @@
        :body "Malformed JSON body"})))
 
 (defn -request->response
+  "Execute an HTTP request using clj-http as a client, handling network
+  errors and JSON decoding, and returning a Ring-style response map."
   [request]
   (let [response (safely (http/request (assoc (write-json-body request)
                                               :throw-exceptions false
@@ -51,8 +61,9 @@
           :else response)))
 
 (defn request->response
-  "This function only returns a coerced valid response, or short-circuit
-  with an exception."
+  "Validate the request against a schema, execute the request, validate
+  the response against a schema, and short-circuit with structured
+  exceptions on any validation or HTTP error."
   [request-schema response-schema request]
   (if-let [explanation (me/humanize (m/explain request-schema request))]
     (throw (ex-info "An upstream request doesn't conform to its excepted schema."
