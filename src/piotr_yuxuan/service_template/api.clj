@@ -6,6 +6,7 @@
   serving the API."
   (:require
    [clojure.java.io :as io]
+   [com.brunobonacci.mulog :as u]
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
@@ -137,6 +138,7 @@
   "Launch a Jetty server with the API handler on port 3000 and return
   the configuration with the server instance."
   [config]
+  (u/log ::start)
   (closeable-map*
     (let [server (jetty/run-jetty (fn [request]
                                     ((reload/wrap-reload (->handler config)) request))

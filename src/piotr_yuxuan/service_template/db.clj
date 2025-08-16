@@ -4,6 +4,7 @@
   and connection pooling."
   (:require
    [clojure.java.io :as io]
+   [com.brunobonacci.mulog :as u]
    [malli.core :as m]
    [malli.error :as me]
    [malli.util :as mu]
@@ -126,6 +127,7 @@
   "Return a closeable configuration map with an initialised datasource,
   SQL query templates, and optionally runs migrations."
   [config]
+  (u/log ::start)
   (closeable-map*
    (-> config
        (assoc ::datasource (->connection-pool config)

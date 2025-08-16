@@ -10,6 +10,7 @@
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
    [piotr-yuxuan.malli-cli :as malli-cli]
    [piotr-yuxuan.service-template.api :as api]
+   [piotr-yuxuan.service-template.log :as log]
    [piotr-yuxuan.service-template.config :as config :refer [Config]]
    [piotr-yuxuan.service-template.db :as db]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
@@ -20,6 +21,7 @@
   [config]
   (closeable-map*
    (-> config
+       log/start
        db/start
        starling-api/start
        api/start)))

@@ -4,6 +4,7 @@
   (:require
    [clj-http.client :as http]
    [clojure.string :as str]
+   [com.brunobonacci.mulog :as u]
    [malli.core :as m]
    [piotr-yuxuan.service-template.http :as st.http]
    [piotr-yuxuan.service-template.math :refer [NonNegInt64]]
@@ -206,6 +207,7 @@
   "Verify API compatibility with the reference OpenAPI version and
   return the configuration."
   [{::keys [api-base] :as config}]
+  (u/log ::start)
   (let [diff (openapi-spec/diff api-reference-version (str/join "/" [api-base "openapi.json"]))]
     (when-not (openapi-spec/compatible? diff)
       (throw (ex-info "The current version API is incompatible with the reference version, can't start."

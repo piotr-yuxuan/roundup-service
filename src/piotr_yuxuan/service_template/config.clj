@@ -7,6 +7,7 @@
    [malli.core :as m]
    [piotr-yuxuan.malli-cli :as malli-cli]
    [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.log :as log]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
 
 (def Config
@@ -21,6 +22,7 @@
                 :short-option "-h"
                 :arg-number 0}]]
 
+    [::log/publishers [:sequential {:default log/default-publishers} :any]]
     [::db/hostname [:string {:default "localhost", :long-option "--db-hostname"}]]
     [::db/port [pos-int? {:default 5432, :long-option "--db-port"}]]
     [::db/dbname [:string {:default "database", :long-option "--dbname"}]]
