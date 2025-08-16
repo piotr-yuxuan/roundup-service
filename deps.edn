@@ -7,11 +7,10 @@
         ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
         ring/ring-jetty-adapter {:mvn/version "1.14.2"} ; Jetty server adapter for Ring.
         ring/ring-headers {:mvn/version "0.4.0"} ; Middleware for HTTP headers.
-        metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]} ; Fast, data-driven routing library.
+        metosin/reitit {:mvn/version "0.9.1"} ; Fast, data-driven routing library.
         metosin/ring-http-response {:mvn/version "0.9.5" :exclusions [ring/ring-core]} ; HTTP response helpers.
 
         ;; API documentation & schema
-        metosin/malli {:mvn/version "0.19.1"} ; Data-driven schema library.
         metosin/jsonista {:mvn/version "0.3.13"} ; High-performance JSON library.
         metosin/ring-swagger-ui {:mvn/version "5.20.0"} ; Swagger UI integration for Ring.
         org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"} ; Compare OpenAPI specifications.
