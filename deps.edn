@@ -41,7 +41,6 @@
         com.github.piotr-yuxuan/malli-cli {:mvn/version "2.1.2"} ; CLI configuration values using Malli.
         }
  :aliases {:run/service {:main-opts ["-m" "piotr-yuxuan.service-template.main"]}
-           :build {:extra-deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}}}
            :test/env {:extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
                                    org.testcontainers/postgresql {:mvn/version "1.20.0"}}}
            :dev/reloaded {:extra-paths ["."
