@@ -35,7 +35,45 @@
     request))
 
 (defn secret-token-reveal
-  "`clj-http.client` middleware for outgoing requests."
+  "Middleware for `clj-http.client` that transparently replaces a
+placeholder `Secret` token with a proper `Authorization` header, as
+close as possible to the actual HTTP call.
+
+**Rationale**
+
+In many systems, secrets should not be materialised too early or
+stored in plain text throughout the request lifecycle. Instead, they
+should remain wrapped (here, in the
+`piotr_yuxuan.service_template.secret.Secret` record) until the last
+possible moment. This middleware ensures that:
+
+- If no `:token` header is present, the request is passed through
+  unchanged.
+- If a plain string is provided under `:token`, nothing happens:
+  only wrapped secrets are eligible for injection.
+- If an `:authorization` header is already present and not exactly
+  `\"Bearer \"`, it is preserved: the middleware never overrides an
+  existing non-empty token.
+- If the `:authorization` header is the placeholder value `\"Bearer
+  \"` and the `:token` entry is a `Secret`, then the secret’s value is
+  revealed and spliced into the header, producing `\"Bearer
+  <token-value>\"`.
+- After injection, the temporary `:token` header is removed, so only
+  a standard `Authorization` header is sent over the wire.
+
+**Example**
+
+``` clojure
+(http/with-additional-middleware [secret-token-reveal]
+  (http/request {:method :get
+                 :url \"http://example.com\"
+                 :headers {\"authorization\" \"Bearer \"
+                           :token (Secret. \"s3cr3t\")}}))
+```
+Results in an outgoing request with:
+``` clojure
+{\"authorization\" \"Bearer s3cr3t\"}
+```"
   [client]
   (fn
     ([req] (client (-reveal-token req)))
