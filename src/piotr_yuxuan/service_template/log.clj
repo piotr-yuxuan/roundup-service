@@ -6,7 +6,10 @@
 
 (def default-publishers
   [{:type :console-json
-    :pretty? true}])
+    :pretty? true}
+   {:type :jvm-metrics
+    :sampling-interval (and :ms 60000)
+    :jvm-metrics {:all true}}])
 
 (defn start
   [{::keys [publishers] :as config}]
