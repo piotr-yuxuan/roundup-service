@@ -56,7 +56,7 @@
     [::api/port [:int {:default 3000, :short-option "-p", :long-option "--port"}]]
 
     [::logger/prometheus-push-gateway [:string {:default "http://localhost:9091", :long-option "--prometheus-push-url"}]]
-    [::logger/zipkin-url [:string {:default "http://localhost:9411/", :long-option "--zipkin-url"}]]
+    [::logger/zipkin-url [:string {:default "http://localhost:9411", :long-option "--zipkin-url"}]]
 
     [::db/hostname [:string {:default "localhost", :long-option "--db-hostname"}]]
     [::db/port [pos-int? {:default 5432, :long-option "--db-port"}]]
