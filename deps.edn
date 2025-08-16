@@ -1,6 +1,7 @@
 {:paths ["src" "resources"]
- :deps { ;; Core language and utilities
+ :deps {;; Core language and utilities
         org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself.
+        babashka/process {:mvn/version "0.5.21"} ; Clojure wrapper for java.lang.ProcessBuilder
 
         ;; Web server and routing
         ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
