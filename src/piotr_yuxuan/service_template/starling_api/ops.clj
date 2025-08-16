@@ -127,9 +127,10 @@
                  :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                  :headers {"accept" "application/json"
                            "authorization" "Bearer " :token token}}]
-    (->> request
-         (st.http/request->response :any :any)
-         :body)))
+    (http/with-additional-middleware [secret/secret-token-reveal]
+      (->> request
+           (st.http/request->response :any :any)
+           :body))))
 
 (def get-one-savings-goal-schema<-
   "Validate response body containing a single savings goal."
