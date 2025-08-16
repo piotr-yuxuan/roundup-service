@@ -107,7 +107,7 @@ couple of observations that I'd be glad to fix on day 1 if allowed to
   =defaultCategory= of the =AccountV2= instances from
   =/api/v2/accounts=.
 
-## Getting started
+## Getting started running this service
 
 - Run tests
 ``` zsh
@@ -139,7 +139,41 @@ Any option appended at the end of the command line above is passed
 down to the uberjar. Remove the `--show-config` to get it to actully
 run instead of just displaying the CLI help and exit.
 
-## Development
+### Prometheus (monitoring and alerting)
+
+- Browser URL: http://localhost:9090
+
+### Grafana (dashboard visualisation)
+
+- Browser URL: http://localhost:3001
+
+Grafana visualises the metrics collected by Prometheus with dashboards
+configured for PostgreSQL. Anonymous login is enabled with Admin
+rights for ease of access.
+
+### Postgres database
+
+- Browser URL: http://localhost:5431
+- CLI connection (from your local machine if `psql` is installed):
+
+``` zsh
+psql -h localhost -p 5432 -U user -d database
+```
+
+Default credentials are:
+- User: user
+- Password: password
+- Database: database
+
+From a repl you may create a new migration with:
+
+``` clojure
+(migratus/create config "create-user")
+```
+
+See the related namespace.
+
+## Getting started as a developer
 
 If you don't have Clojure toolchain installed on your machine,
 consider opening a REPL from within a vanilla Docker image and mount
@@ -178,13 +212,6 @@ This launches multiple services related to PostgreSQL, monitoring, and
 visualisation. Below are instructions to connect to each service
 either via CLI or through a web browser.
 
-### Postgres database
-
-- Browser URL: http://localhost:5431
-- CLI connection (from your local machine if `psql` is installed):
-
-``` zsh
-psql -h localhost -p 5432 -U user -d database
 ```
 
 Default credentials are:
@@ -197,15 +224,3 @@ From a repl you may create a new migration with:
 ``` clojure
 (migratus/create config "create-user")
 ```
-
-### Prometheus (monitoring and alerting)
-
-- Browser URL: http://localhost:9090
-
-### Grafana (dashboard visualisation)
-
-- Browser URL: http://localhost:3001
-
-Grafana visualises the metrics collected by Prometheus with dashboards
-configured for PostgreSQL. Anonymous login is enabled with Admin
-rights for ease of access.
