@@ -72,6 +72,14 @@ services:
       - prometheus
     restart: unless-stopped
 
+  zipkin:
+    image: ghcr.io/openzipkin/zipkin-slim:latest
+    environment:
+      - STORAGE_TYPE=mem
+      - MYSQL_HOST=mysql
+    ports:
+      - '9411:9411'
+
 volumes:
   pg_data:
 
