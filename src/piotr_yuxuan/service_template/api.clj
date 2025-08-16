@@ -39,12 +39,12 @@
 (defn routes
   "Define the API route structure, including OpenAPI and application
   endpoints."
-  [config]
+  [{:keys [version commit] :as config}]
   [["/openapi.json"
     {:get {:no-doc true
-           :openapi {:info {:title "my-api"
+           :openapi {:info {:title "Starling round-up service"
                             :description (slurp (io/resource "OpenAPI frontpage description.md"))
-                            :version "0.0.1"}
+                            :version (format "%s (commit %s)" version (subs commit 0 7))}
                      :components {:securitySchemes {"bearer" {:type :http
                                                               :scheme "bearer"
                                                               :bearerFormat "JWT"}}}}
@@ -142,13 +142,14 @@
 (defn start
   "Launch a Jetty server with the API handler on port 3000 and return
   the configuration with the server instance."
-  [config]
+  [{::keys [port] :as config}]
   (log/trace ::start
     []
     (closeable-map*
-      (let [server (jetty/run-jetty (fn [request]
-                                      ((reload/wrap-reload (->handler config)) request))
-                                    {:port 3000
-                                     :join? false})]
-        (println "server running in port 3000")
-        (assoc config ::server server)))))
+     (let [server (jetty/run-jetty (fn [request]
+                                     ((reload/wrap-reload (->handler config)) request))
+                                   {:port port
+                                    :join? false})]
+       (println (format "Server running in port %s." port))
+       (log/log ::running :port port)
+       (assoc config ::server server)))))

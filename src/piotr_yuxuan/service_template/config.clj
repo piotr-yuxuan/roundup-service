@@ -13,7 +13,8 @@
    [piotr-yuxuan.malli-cli.utils :refer [deep-merge]]
    [piotr-yuxuan.service-template.db :as db]
    [piotr-yuxuan.service-template.logger :as logger]
-   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
+   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
+   [piotr-yuxuan.service-template.api :as api]))
 
 (def service-name
   "starling-roundup-service")
@@ -52,6 +53,8 @@
                 :arg-number 0}]]
 
     [::logger/publisher-names [:set {:default #{:jvm-metrics :prometheus :zipkin}} keyword?]]
+    [::api/port [:int {:default 3000, :short-option "-p", :long-option "--port"}]]
+
     [::logger/prometheus-push-gateway [:string {:default "http://localhost:9091", :long-option "--prometheus-push-url"}]]
     [::logger/zipkin-url [:string {:default "http://localhost:9411/", :long-option "--zipkin-url"}]]
 
