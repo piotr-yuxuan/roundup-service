@@ -24,3 +24,4 @@ perf/.terraform*
 perf/.terraform/**
 .rebel_readline_history
 /dev-resources/pg_data/
+/log.json

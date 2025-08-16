@@ -7,13 +7,15 @@ COPY deps.edn build.clj ./
 RUN --mount=from=m2repo,target=/root/.m2,readwrite clojure -P -T:build/task
 COPY src ./src
 COPY resources ./resources
-RUN --mount=from=m2repo,target=/root/.m2,readwrite clojure -T:build/task uberjar
+RUN --mount=from=m2repo,target=/root/.m2,readwrite \
+    --mount=from=git,target=/.git,readonly \
+    clojure -T:build/task uberjar
 RUN mkdir tmp-classes \
     && cd tmp-classes \
     && jar xf ../target/*.jar \
     && cd ..
 RUN $JAVA_HOME/bin/jlink \
-    --add-modules $(jdeps --multi-release 24 --ignore-missing-deps --print-module-deps tmp-classes) \
+    --add-modules $(jdeps --multi-release 24 --ignore-missing-deps --print-module-deps tmp-classes),jdk.zipfs \
     --strip-debug \
     --no-man-pages \
     --no-header-files \

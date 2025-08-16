@@ -44,17 +44,25 @@
       {:status http-status/internal-server-error
        :body "Malformed JSON body"})))
 
+(defn- -request
+  "Macros and threads lose track of the middleware in tests. Using
+  this thin variable to fix tests."
+  [request]
+  (log/trace ::http/request
+    [:method (:method request) :url (:url request)]
+    (http/request request)))
+
 (defn -request->response
   "Execute an HTTP request using clj-http as a client, handling network
   errors and JSON decoding, and returning a Ring-style response map."
   [request]
-  (let [response (safely-fn
+  (let [*current-middleware* http/*current-middleware*
+        response (safely-fn
                   (fn []
-                    (log/trace ::http/request
-                      [:method (:method request) :url (:url request)]
-                      (http/request (assoc (write-json-body request)
-                                           :throw-exceptions false
-                                           :ignore-unknown-host? true))))
+                    (http/with-middleware *current-middleware*
+                      (-request (assoc (write-json-body request)
+                                       :throw-exceptions false
+                                       :ignore-unknown-host? true))))
                   :circuit-breaker ::http
                   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
                   :max-retries 5
