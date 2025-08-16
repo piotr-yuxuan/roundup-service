@@ -1,0 +1,3 @@
+#!/bin/bash
+
+clojure -J-Xmx512m -A:test/env:dev/reloaded:test -M -m kaocha.runner --config-file tests.edn "$@"

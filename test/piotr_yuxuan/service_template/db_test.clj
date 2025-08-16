@@ -24,7 +24,7 @@
    ::db/username (.getUsername (:container container))
    ::db/password (.getPassword (:container container))})
 
-(deftest insert-roundup-job-test
+(deftest ^:test-containers insert-roundup-job-test
   (testing "happy path"
     (testing "with minimal columns"
       (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -87,7 +87,7 @@
                        :explanation {:calendar-year ["should be an integer"]}}}
                (ex-data ex)))))))
 
-(deftest update-roundup-job-test
+(deftest ^:test-containers update-roundup-job-test
   (testing "no records found"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                             :exposed-ports [pg-port]})))
@@ -147,7 +147,7 @@
                 :round-up-amount-in-minor-units
                 (= 1234)))))))
 
-(deftest find-roundup-job-test
+(deftest ^:test-containers find-roundup-job-test
   (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                           :exposed-ports [pg-port]})))
               config (db/start (postgres-container->db-config container))]

@@ -111,7 +111,7 @@ couple of observations that I'd be glad to fix on day 1 if allowed to
 
 - Run tests
 ``` zsh
-clojure -X:test/env:test/run
+bin/kaocha
 ```
 
 - Build the Docker image
@@ -175,6 +175,12 @@ See the related namespace.
 
 ## Getting started as a developer
 
+Run a test watcher skipping slow tests (when applicable) with:
+
+``` zsh
+bin/kaocha --watch --skip-meta :test-containers
+```
+
 If you don't have Clojure toolchain installed on your machine,
 consider opening a REPL from within a vanilla Docker image and mount
 your local repository as well as the code of this project. The
@@ -211,13 +217,6 @@ docker compose up
 This launches multiple services related to PostgreSQL, monitoring, and
 visualisation. Below are instructions to connect to each service
 either via CLI or through a web browser.
-
-```
-
-Default credentials are:
-- User: user
-- Password: password
-- Database: database
 
 From a repl you may create a new migration with:
 

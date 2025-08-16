@@ -44,14 +44,7 @@
                                         "resources"
                                         "dev" "dev-resources"
                                         "test"]}
-           :test/run {:extra-paths ["test"]
-                      :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
-                      :main-opts ["-m" "kaocha.runner"]
-                      :exec-fn kaocha.runner/exec-fn
-                      :exec-args {}}
-           :test/watch {:exec-args {:watch? true
-                                    :randomize? true
-                                    :fail-fast? false}}
+           :test {:extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}}
            :build/task {:replace-paths ["." "resources"]
                         :replace-deps {io.github.clojure/tools.build {:mvn/version "0.10.10"}}
                         :ns-default build}
