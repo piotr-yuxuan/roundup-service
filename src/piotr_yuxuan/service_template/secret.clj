@@ -9,6 +9,14 @@
   (equals [_ other] (->> (.value ^Secret other) (= value) (and (instance? Secret other))))
   (hashCode [_] (.hashCode value)))
 
+(defn ->secret
+  [^String x]
+  (Secret. x))
+
+(defn value
+  [^Secret x]
+  (.-value x))
+
 (defn secret-token-hide
   "Ring middleware for incoming requests."
   [handler]
