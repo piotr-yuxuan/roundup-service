@@ -105,8 +105,6 @@
            :middleware [;; swagger & openapi
                         swagger/swagger-feature
                         openapi/openapi-feature
-                        authorization/wrap-authorization
-                        secret/secret-token-hide
                         ;; query-params & form-params
                         parameters/parameters-middleware
                         ;; content-negotiation
@@ -122,7 +120,9 @@
                         ;; coercing request parameters
                         coercion/coerce-request-middleware
                         ;; multipart
-                        multipart/multipart-middleware]}}))
+                        multipart/multipart-middleware
+                        authorization/wrap-authorization
+                        secret/secret-token-hide]}}))
 
 (defn ->handler
   "Create a Ring handler combining the router and Swagger UI endpoints."
