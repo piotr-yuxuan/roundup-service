@@ -59,11 +59,10 @@
     [::db/port [pos-int? {:default 5432, :long-option "--db-port"}]]
     [::db/dbname [:string {:default "database", :long-option "--dbname"}]]
     [::db/username [:string {:default "user", :long-option "--db-username"}]]
-    [::db/password [:string {:default "password"
-                             :env-var "DB_PASSWORD"
-                             :secret true}]]
-    [::db/migrate? [boolean? {:default false, :long-option "--db-migrate"}]]
-    [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api"}]]]))
+    [::db/password [:string {:default "password" :env-var "DB_PASSWORD" :secret true}]]
+    [::db/migrate? [boolean? {:default false, :long-option "--db-migrate", :arg-number 0}]]
+
+    [::starling-api/api-base [:string {:default "https://api-sandbox.starlingbank.com/api", :long-option "--starling-url"}]]]))
 
 (defn load-config
   "Parse and decode command-line arguments according to the
