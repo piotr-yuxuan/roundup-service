@@ -4,16 +4,45 @@
   options. Provide utilities to load and decode configuration from
   command-line arguments or environment variables."
   (:require
+   [babashka.process :as process]
+   [clojure.java.io :as io]
+   [clojure.string :as str]
+   [com.brunobonacci.mulog :as log]
    [malli.core :as m]
    [piotr-yuxuan.malli-cli :as malli-cli]
+   [piotr-yuxuan.malli-cli.utils :refer [deep-merge]]
    [piotr-yuxuan.service-template.db :as db]
-   [piotr-yuxuan.service-template.log :as log]
+   [piotr-yuxuan.service-template.logger :as logger]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
+
+(def service-name
+  "starling-roundup-service")
+
+(defn env
+  []
+  (or (System/getenv "ENV") "local"))
+
+(defn version
+  []
+  (some->> (io/resource (str service-name ".version"))
+           slurp
+           str/trim))
+
+(defmacro commit
+  []
+  (-> (process/process "git rev-parse HEAD" {:out :string})
+      process/check
+      :out
+      str/trim))
 
 (def Config
   (m/schema
    [:map {:closed true
           :decode/args-transformer malli-cli/args-transformer}
+    [:app-name :string]
+    [:env :string]
+    [:version :string]
+    [:commit :string]
     [:show-config? {:optional true}
      [boolean? {:description "Print actual configuration value and exit."
                 :arg-number 0}]]
