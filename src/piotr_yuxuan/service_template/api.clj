@@ -12,6 +12,7 @@
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
    [piotr-yuxuan.service-template.core :as core]
    [piotr-yuxuan.service-template.exception :as st.exception]
+   [piotr-yuxuan.service-template.secret :as secret]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
@@ -25,7 +26,6 @@
    [reitit.swagger-ui :as swagger-ui]
    [ring.adapter.jetty :as jetty]
    [ring.middleware.authorization :as authorization]
-   [piotr-yuxuan.service-template.secret :as secret]
    [ring.middleware.reload :as reload]
    [ring.util.http-status :as http-status])
   (:import
