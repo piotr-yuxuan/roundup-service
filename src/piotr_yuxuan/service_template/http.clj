@@ -16,7 +16,7 @@
    [ring.util.http-response :as http-response]
    [ring.util.http-status :as http-status]
    [ring.util.response :as response]
-   [safely.core :refer [safely]])
+   [safely.core :refer [safely-fn]])
   (:import
    (com.fasterxml.jackson.core JsonParseException)))
 
@@ -48,13 +48,17 @@
   "Execute an HTTP request using clj-http as a client, handling network
   errors and JSON decoding, and returning a Ring-style response map."
   [request]
-  (let [response (safely (http/request (assoc (write-json-body request)
-                                              :throw-exceptions false
-                                              :ignore-unknown-host? true))
-                   :on-error
-                   :circuit-breaker ::http
-                   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-                   :max-retries 0)
+  (let [response (safely-fn
+                  (fn []
+                    (log/trace ::http/request
+                      [:method (:method request) :url (:url request)]
+                      (http/request (assoc (write-json-body request)
+                                           :throw-exceptions false
+                                           :ignore-unknown-host? true))))
+                  :circuit-breaker ::http
+                  :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+                  :max-retries 5
+                  :tracking-capture (fn [r] {:http-status (:http-status r)}))
         content-type (some-> response (response/find-header "content-type") val)
         json-body? (some->> content-type (re-find #"(?i)application/json"))]
     (cond (not response) (http-response/bad-request {:error "Unknown host."})
