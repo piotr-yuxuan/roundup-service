@@ -72,13 +72,25 @@ services:
       - prometheus
     restart: unless-stopped
 
-  zipkin:
-    image: ghcr.io/openzipkin/zipkin-slim:latest
-    environment:
-      - STORAGE_TYPE=mem
-      - MYSQL_HOST=mysql
+  # zipkin:
+  #   image: ghcr.io/openzipkin/zipkin-slim:latest
+  #   environment:
+  #     - STORAGE_TYPE=mem
+  #     - MYSQL_HOST=mysql
+  #   ports:
+  #     - '9411:9411'
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./dev-resources/tempo.yml:/etc/tempo.yml
     ports:
-      - '9411:9411'
+      - "3200:3200"   # Tempo HTTP API
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9411:9411"   # Zipkin
+    restart: unless-stopped
 
 volumes:
   pg_data:
