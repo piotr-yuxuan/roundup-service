@@ -1,14 +1,20 @@
-(ns piotr-yuxuan.service-template.log
+(ns piotr-yuxuan.service-template.logger
   (:require
-   [com.brunobonacci.mulog :as u]
+   [com.brunobonacci.mulog :as log]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*
                                                          with-tag]]))
 
 (defn ->publishers
   [{::keys [publisher-names] :as config}]
   (cond-> []
+
     (contains? publisher-names :console-json)
     (conj {:type :console-json
+           :pretty? true})
+
+    (contains? publisher-names :file-json)
+    (conj {:type :file-json
+           :filename "log.json"
            :pretty? true})
 
     (contains? publisher-names :jvm-metrics)
@@ -19,15 +25,20 @@
     (contains? publisher-names :prometheus)
     (conj {:type :prometheus
            :push-gateway {:job "starling-roundup-service"
-                          :endpoint (::prometheus-push-gateway config)}})))
+                          :endpoint (::prometheus-push-gateway config)}})
+
+    (contains? publisher-names :zipkin)
+    (conj {:type :zipkin
+           :url (::zipkin-url config)})))
 
 (defn start
   [config]
-  (u/log ::start)
+  (log/log ::start)
   (closeable-map*
    (let [publishers (->publishers config)]
+     (log/set-global-context! (select-keys config [:app-name :version :env :commit]))
      (assoc config
             ::publishers publishers
             ::stop (with-tag ::closeable-map/fn
-                     (u/start-publisher! {:type :multi
-                                          :publishers publishers}))))))
+                     (log/start-publisher! {:type :multi
+                                            :publishers publishers}))))))

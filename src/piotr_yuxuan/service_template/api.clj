@@ -6,7 +6,7 @@
   serving the API."
   (:require
    [clojure.java.io :as io]
-   [com.brunobonacci.mulog :as u]
+   [com.brunobonacci.mulog :as log]
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]

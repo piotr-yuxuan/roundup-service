@@ -22,8 +22,9 @@
                 :short-option "-h"
                 :arg-number 0}]]
 
-    [::log/publisher-names [:set {:default #{:console-json :jvm-metrics :prometheus}} keyword?]]
-    [::log/prometheus-push-gateway [:string {:default "http://localhost:9091"}]]
+    [::logger/publisher-names [:set {:default #{:jvm-metrics :prometheus :zipkin}} keyword?]]
+    [::logger/prometheus-push-gateway [:string {:default "http://localhost:9091", :long-option "--prometheus-push-url"}]]
+    [::logger/zipkin-url [:string {:default "http://localhost:9411/", :long-option "--zipkin-url"}]]
 
     [::db/hostname [:string {:default "localhost", :long-option "--db-hostname"}]]
     [::db/port [pos-int? {:default 5432, :long-option "--db-port"}]]
@@ -39,4 +40,11 @@
   "Parse and decode command-line arguments according to the
   configuration schema, returning a validated configuration map."
   [args]
-  (m/decode Config args malli-cli/cli-transformer))
+  (log/trace ::load-config
+    []
+    (as-> {:app-name service-name
+           :env (env)
+           :version (version)
+           :commit (commit)}
+        $
+      (deep-merge $ (m/decode Config args malli-cli/cli-transformer)))))

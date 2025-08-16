@@ -5,6 +5,7 @@
   and enforce schemas for both requests and upstream responses."
   (:require
    [clj-http.client :as http]
+   [com.brunobonacci.mulog :as log]
    [jsonista.core :as j]
    [malli.core :as m]
    [malli.error :as me]
