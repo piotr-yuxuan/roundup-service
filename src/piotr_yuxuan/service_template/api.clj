@@ -74,8 +74,13 @@
                                  :handler (fn [request]
                                             (let [args (merge (-> request :parameters :body)
                                                               (-> request :authorization (select-keys [:token])))]
-                                              {:status http-status/ok
-                                               :body (core/job config args)}))}}]]])
+                                              (log/with-context {:account-uid (:account-uid args)
+                                                                 :calendar-year (:calendar-year args)
+                                                                 :calendar-week (:calendar-week args)}
+                                                (log/trace ::round-up-job
+                                                  []
+                                                  {:status http-status/ok
+                                                   :body (core/job config args)}))))}}]]])
 
 (defn ->router
   "Build a Ring router with middleware, coercion, and exception
@@ -138,11 +143,12 @@
   "Launch a Jetty server with the API handler on port 3000 and return
   the configuration with the server instance."
   [config]
-  (u/log ::start)
-  (closeable-map*
-    (let [server (jetty/run-jetty (fn [request]
-                                    ((reload/wrap-reload (->handler config)) request))
-                                  {:port 3000
-                                   :join? false})]
-      (println "server running in port 3000")
-      (assoc config ::server server))))
+  (log/trace ::start
+    []
+    (closeable-map*
+      (let [server (jetty/run-jetty (fn [request]
+                                      ((reload/wrap-reload (->handler config)) request))
+                                    {:port 3000
+                                     :join? false})]
+        (println "server running in port 3000")
+        (assoc config ::server server)))))
