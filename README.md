@@ -121,6 +121,7 @@ VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 docker buildx build \
   --build-arg VERSION=${VERSION} \
   --build-context m2repo=$HOME/.m2/ \
+  --build-context git=./.git/ \
   --tag localhost/com.github.piotr-yuxuan.service-template:${VERSION} \
   .
 ```
