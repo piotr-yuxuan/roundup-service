@@ -13,14 +13,16 @@
   that week. The period is P7D (7 days), representing a
   half-open [start, start+period) range. We consider that a week
   starts on Monday."
-  [^long year week]
-  (let [week-fields (WeekFields/ISO)
-        start (-> (.atDay (Year/of year) 1)
-                  (.with (.weekOfYear week-fields) week)
-                  (.with (.dayOfWeek week-fields) 1) ;; Monday
-                  (.atStartOfDay (ZoneId/systemDefault)))]
-    {:min-timestamp (.toInstant start)
-     :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))}))
+  ([^long year week]
+   (year+week-number->interval year week (ZoneId/of "Europe/London")))
+  ([^long year week zone]
+   (let [week-fields (WeekFields/ISO)
+         start (-> (.atDay (Year/of year) 1)
+                   (.with (.weekOfYear week-fields) week)
+                   (.with (.dayOfWeek week-fields) 1) ;; Monday
+                   (.atStartOfDay zone))]
+     {:min-timestamp (.toInstant start)
+      :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))})))
 
 (defn select-matching-savings-goal
   "Retrieve the active savings goal matching a given name from Starling
@@ -63,7 +65,7 @@
                            (db/update-roundup-job! config))
 
         ;; Record the round-up amount at this point in time.
-        {:keys [savings-goal-uid transfer-uid round-up-amount-in-minor-units] :as job-execution}
+        {:keys [savings-goal-uid transfer-uid round-up-amount-in-minor-units]}
         (->> args
              (starling-api/get-settled-transactions-between config)
              (filter (comp #{"SETTLED"} :status))
