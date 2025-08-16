@@ -24,6 +24,7 @@
    [reitit.swagger-ui :as swagger-ui]
    [ring.adapter.jetty :as jetty]
    [ring.middleware.authorization :as authorization]
+   [piotr-yuxuan.service-template.secret :as secret]
    [ring.middleware.reload :as reload]
    [ring.util.http-status :as http-status])
   (:import
@@ -98,6 +99,8 @@
            :middleware [;; swagger & openapi
                         swagger/swagger-feature
                         openapi/openapi-feature
+                        authorization/wrap-authorization
+                        secret/secret-token-hide
                         ;; query-params & form-params
                         parameters/parameters-middleware
                         ;; content-negotiation
@@ -113,8 +116,7 @@
                         ;; coercing request parameters
                         coercion/coerce-request-middleware
                         ;; multipart
-                        multipart/multipart-middleware
-                        authorization/wrap-authorization]}}))
+                        multipart/multipart-middleware]}}))
 
 (defn ->handler
   "Create a Ring handler combining the router and Swagger UI endpoints."

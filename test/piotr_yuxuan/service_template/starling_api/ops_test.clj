@@ -19,7 +19,7 @@
           expected-request {:method :get
                             :url (str/join "/" [api-base "v2/accounts"])
                             :headers {"accept" "application/json"
-                                      "authorization" (str "Bearer " token)}}]
+                                      "authorization" "Bearer " :token token}}]
       (with-redefs [st.http/request->response (fn [_ _ request]
                                                 (is (= expected-request request))
                                                 {:status http-status/ok
@@ -41,7 +41,7 @@
             expected-request {:method :get
                               :url (str/join "/" [api-base "v2/feed/account" account-uid "settled-transactions-between"])
                               :headers {"accept" "application/json"
-                                        "authorization" (str "Bearer " token)}
+                                        "authorization" "Bearer " :token token}
                               :query-params {:minTransactionTimestamp min-timestamp
                                              :maxTransactionTimestamp max-timestamp}}]
         (with-redefs [st.http/request->response
@@ -80,7 +80,7 @@
             expected-request {:method :get
                               :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
                               :headers {"accept" "application/json"
-                                        "authorization" (str "Bearer " token)}}]
+                                        "authorization" "Bearer " :token token}}]
         (with-redefs [st.http/request->response
                       (fn [_ _ request]
                         (is (= expected-request request))
@@ -113,7 +113,7 @@
                             :url (str/join "/" [api-base "v2/account" account-uid "savings-goals"])
                             :headers {"accept" "application/json"
                                       "content-type" "application/json"
-                                      "authorization" (str "Bearer " token)}
+                                      "authorization" "Bearer " :token token}
                             :body {:name savings-goal-name
                                    :currency savings-goal-currency}}]
       (with-redefs [st.http/request->response
@@ -139,7 +139,7 @@
             expected-request {:method :get
                               :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid])
                               :headers {"accept" "application/json"
-                                        "authorization" (str "Bearer " token)}}]
+                                        "authorization" "Bearer " :token token}}]
         (with-redefs [st.http/request->response
                       (fn [_ _ request]
                         (is (= expected-request request))
@@ -162,7 +162,7 @@
             expected-request {:method :get
                               :url (str/join "/" [api-base "v2/accounts" account-uid "confirmation-of-funds"])
                               :headers {"accept" "application/json"
-                                        "authorization" (str "Bearer " token)}
+                                        "authorization" "Bearer " :token token}
                               :query-params {:targetAmountInMinorUnits target-amount}}]
         (with-redefs [st.http/request->response
                       (fn [_ _ request]
@@ -188,8 +188,8 @@
             expected-request {:method :put
                               :url (str/join "/" [api-base "v2/account" account-uid "savings-goals" savings-goal-uid "add-money" transfer-uid])
                               :headers {"accept" "application/json"
-                                        "authorization" (str "Bearer " token)
-                                        "content-type" "application/json"}
+                                        "content-type" "application/json"
+                                        "authorization" "Bearer " :token token}
                               :body {:amount amount}}]
         (with-redefs [st.http/request->response
                       (fn [_ _ request]
