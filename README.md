@@ -116,7 +116,7 @@ bin/kaocha
 
 - Build the Docker image
 ``` zsh
-VERSION=$(cat resources/service-template.version | tr -d '\n\r')
+VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 
 docker buildx build \
   --build-arg VERSION=${VERSION} \
@@ -130,7 +130,7 @@ docker buildx build \
 docker run \
   --network service-template_default \
   -p 3000:3000 \
-  localhost/com.github.piotr-yuxuan.service-template:$(cat resources/service-template.version | tr -d '\n\r') \
+  localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
   --db-hostname postgres \
   --show-config
 ```

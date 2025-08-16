@@ -1,16 +1,16 @@
 {:paths ["src" "resources"]
- :deps { ;; Core language and utilities
+ :deps {;; Core language and utilities
         org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself.
+        babashka/process {:mvn/version "0.5.21"} ; Clojure wrapper for java.lang.ProcessBuilder
 
         ;; Web server and routing
         ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
         ring/ring-jetty-adapter {:mvn/version "1.14.2"} ; Jetty server adapter for Ring.
         ring/ring-headers {:mvn/version "0.4.0"} ; Middleware for HTTP headers.
-        metosin/reitit {:mvn/version "0.9.1" :exclusions [metosin/malli]} ; Fast, data-driven routing library.
+        metosin/reitit {:mvn/version "0.9.1"} ; Fast, data-driven routing library.
         metosin/ring-http-response {:mvn/version "0.9.5" :exclusions [ring/ring-core]} ; HTTP response helpers.
 
         ;; API documentation & schema
-        metosin/malli {:mvn/version "0.19.1"} ; Data-driven schema library.
         metosin/jsonista {:mvn/version "0.3.13"} ; High-performance JSON library.
         metosin/ring-swagger-ui {:mvn/version "5.20.0"} ; Swagger UI integration for Ring.
         org.openapitools.openapidiff/openapi-diff-core {:mvn/version "2.1.2"} ; Compare OpenAPI specifications.
@@ -26,7 +26,11 @@
 
         ;; Logging & monitoring
         com.brunobonacci/mulog {:mvn/version "0.9.0"} ; Structured logging and event data.
-        com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"} ; Advanced console output for μ/log.
+        com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"} ; JSON console output for μ/log.
+        com.brunobonacci/mulog-prometheus {:mvn/version "0.9.0"}
+        com.brunobonacci/mulog-adv-file {:mvn/version "0.9.0"}
+        com.brunobonacci/mulog-jvm-metrics {:mvn/version "0.9.0"} ; Sample JVM metrics
+        com.brunobonacci/mulog-zipkin {:mvn/version "0.9.0"}
         org.slf4j/slf4j-nop {:mvn/version "2.0.17"} ; SLF4J no-op binding (disable logging).
 
         ;; Reliability and error handling

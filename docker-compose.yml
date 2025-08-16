@@ -37,6 +37,7 @@ services:
       - 9187:9187
     depends_on:
       - postgres
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
@@ -46,6 +47,12 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
     ports:
       - 9090:9090
+    restart: unless-stopped
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    ports:
+      - 9091:9091
     restart: unless-stopped
 
   grafana:
@@ -65,6 +72,26 @@ services:
       - 3001:3000
     depends_on:
       - prometheus
+    restart: unless-stopped
+
+  # zipkin:
+  #   image: ghcr.io/openzipkin/zipkin-slim:latest
+  #   environment:
+  #     - STORAGE_TYPE=mem
+  #     - MYSQL_HOST=mysql
+  #   ports:
+  #     - '9411:9411'
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./dev-resources/tempo.yml:/etc/tempo.yml
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9411:9411"   # Zipkin
     restart: unless-stopped
 
 volumes:

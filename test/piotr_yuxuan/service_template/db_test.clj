@@ -4,7 +4,8 @@
    [clojure.test :refer [deftest is testing]]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close!]]
    [piotr-yuxuan.service-template.db :as db]
-   [piotr-yuxuan.service-template.exception :as st.exception])
+   [piotr-yuxuan.service-template.exception :as st.exception]
+   [safely.core])
   (:import
    (clojure.lang ExceptionInfo)
    (org.testcontainers.containers PostgreSQLContainer)))
@@ -30,10 +31,11 @@
       (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                               :exposed-ports [pg-port]})))
                   config (db/start (postgres-container->db-config container))]
-        (let [record (db/insert-roundup-job! config
-                                             {:calendar-week 32
-                                              :calendar-year 2025
-                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})
+        (let [record (binding [safely.core/*sleepless-mode* true]
+                       (db/insert-roundup-job! config
+                                               {:calendar-week 32
+                                                :calendar-year 2025
+                                                :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}))
               expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
                         :savings-goal-uid nil,
                         :round-up-amount-in-minor-units nil,
@@ -50,12 +52,13 @@
       (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                               :exposed-ports [pg-port]})))
                   config (db/start (postgres-container->db-config container))]
-        (let [record (db/insert-roundup-job! config
-                                             {:calendar-week 32
-                                              :calendar-year 2025
-                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                              :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                              :round-up-amount-in-minor-units 1234})
+        (let [record (binding [safely.core/*sleepless-mode* true]
+                       (db/insert-roundup-job! config
+                                               {:calendar-week 32
+                                                :calendar-year 2025
+                                                :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                :round-up-amount-in-minor-units 1234}))
               expected {:account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                         :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                         :round-up-amount-in-minor-units 1234
@@ -72,12 +75,13 @@
                                                                             :exposed-ports [pg-port]})))
                 config (db/start (postgres-container->db-config container))]
       (let [ex (is (thrown-with-msg? ExceptionInfo #"Invalid named parameters"
-                                     (db/insert-roundup-job! config
-                                                             {:calendar-week 32
-                                                              :calendar-year "bad"
-                                                              :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                                              :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                                              :round-up-amount-in-minor-units 1234})))]
+                                     (binding [safely.core/*sleepless-mode* true]
+                                       (db/insert-roundup-job! config
+                                                               {:calendar-week 32
+                                                                :calendar-year "bad"
+                                                                :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                                :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                                :round-up-amount-in-minor-units 1234}))))]
         (is (= {:type ::st.exception/short-circuit
                 :body {:round-up-job {:calendar-week 32
                                       :calendar-year "bad"
@@ -94,12 +98,13 @@
                 config (db/start (postgres-container->db-config container))]
       ;; No records previous inserted.
       (let [ex (is (thrown-with-msg? ExceptionInfo #"No round-up jobs found."
-                                     (db/update-roundup-job! config {:calendar-week 32
-                                                                     :calendar-year 2025
-                                                                     :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                                                     :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                                                     :round-up-amount-in-minor-units 1234
-                                                                     :status "running"})))]
+                                     (binding [safely.core/*sleepless-mode* true]
+                                       (db/update-roundup-job! config {:calendar-week 32
+                                                                       :calendar-year 2025
+                                                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                                       :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                                       :round-up-amount-in-minor-units 1234
+                                                                       :status "running"}))))]
         (is (= (ex-data ex)
                {:type ::st.exception/short-circuit
                 :body {:round-up-job {:calendar-week 32
@@ -116,11 +121,13 @@
       (let [expected {:calendar-week 32
                       :calendar-year 2025
                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
-        (db/insert-roundup-job! config expected)
+        (binding [safely.core/*sleepless-mode* true]
+          (db/insert-roundup-job! config expected))
         (let [ex (is (thrown-with-msg? ExceptionInfo #"Invalid named parameters"
-                                       (db/update-roundup-job! config {:calendar-week 32
-                                                                       :calendar-year 2025
-                                                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})))]
+                                       (binding [safely.core/*sleepless-mode* true]
+                                         (db/update-roundup-job! config {:calendar-week 32
+                                                                         :calendar-year 2025
+                                                                         :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}))))]
           (is (= (ex-data ex)
                  {:type ::st.exception/short-circuit
                   :body {:round-up-job {:calendar-week 32
@@ -137,13 +144,15 @@
       (let [expected {:calendar-week 32
                       :calendar-year 2025
                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
-        (db/insert-roundup-job! config expected)
-        (is (-> (db/update-roundup-job! config {:calendar-week 32
-                                                :calendar-year 2025
-                                                :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
-                                                :round-up-amount-in-minor-units 1234
-                                                :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                                :status "running"})
+        (binding [safely.core/*sleepless-mode* true]
+          (db/insert-roundup-job! config expected))
+        (is (-> (binding [safely.core/*sleepless-mode* true]
+                  (db/update-roundup-job! config {:calendar-week 32
+                                                  :calendar-year 2025
+                                                  :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                  :round-up-amount-in-minor-units 1234
+                                                  :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                  :status "running"}))
                 :round-up-amount-in-minor-units
                 (= 1234)))))))
 
@@ -155,12 +164,14 @@
                     :calendar-year 2025
                     :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
       (testing "record doesn't exist" ;; not inserted
-        (is (nil? (db/find-roundup-job config
-                                       {:calendar-week 32
-                                        :calendar-year 2025
-                                        :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}))))
+        (is (nil? (binding [safely.core/*sleepless-mode* true]
+                    (db/find-roundup-job config
+                                         {:calendar-week 32
+                                          :calendar-year 2025
+                                          :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"})))))
       (testing "happy path"
-        (db/insert-roundup-job! config expected)
+        (binding [safely.core/*sleepless-mode* true]
+          (db/insert-roundup-job! config expected))
         (let [actual (db/find-roundup-job config
                                           {:calendar-week 32
                                            :calendar-year 2025

@@ -6,3 +6,15 @@ datasources:
     url: http://prometheus:9090
     version: 1
     editable: true
+
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: true
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: null
+      tracesToMetrics:
+        datasourceUid: null

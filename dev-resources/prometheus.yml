@@ -7,3 +7,8 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: [ "postgres_exporter:9187" ]
+  - job_name: Push gateway
+    honor_labels: true
+    metrics_path: /metrics
+    static_configs:
+      - targets: [ 'pushgateway:9091' ]

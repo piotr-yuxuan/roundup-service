@@ -4,6 +4,7 @@
   and connection pooling."
   (:require
    [clojure.java.io :as io]
+   [com.brunobonacci.mulog :as log]
    [malli.core :as m]
    [malli.error :as me]
    [malli.util :as mu]
@@ -14,9 +15,11 @@
    [next.jdbc.types :refer [as-other]]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
    [piotr-yuxuan.service-template.exception :as st.exception]
-   [piotr-yuxuan.service-template.math :refer [NonNegInt64]])
+   [piotr-yuxuan.service-template.math :refer [NonNegInt64]]
+   [safely.core :refer [safely]])
   (:import
-   (com.zaxxer.hikari HikariDataSource)))
+   (com.zaxxer.hikari HikariDataSource)
+   (java.sql SQLTransientConnectionException)))
 
 (def RoundupJobExecution
   "Malli application-level schema defining the structure and constraints
@@ -43,11 +46,16 @@
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:round-up-job round-up-job
                                                          :explanation (me/humanize error)}}))))
-  (-> datasource
-      (jdbc/execute! [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
-                     {:timeout 5
-                      :builder-fn rs/as-unqualified-kebab-maps})
-      first))
+  (first
+   (safely (jdbc/execute! datasource [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
+                          {:timeout (and :seconds 5)
+                           :builder-fn rs/as-unqualified-kebab-maps})
+     :on-error
+     :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
+     :track-as ::insert-roundup-job!
+     :circuit-breaker ::insert-job-execution
+     :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+     :max-retries 5)))
 
 (defn update-roundup-job!
   "Validate and update all fields of an existing round-up job execution
@@ -62,10 +70,16 @@
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:round-up-job round-up-job
                                                          :explanation (me/humanize error)}}))))
-  (let [[record] (jdbc/execute! datasource
-                                [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
-                                {:timeout 5
-                                 :builder-fn rs/as-unqualified-kebab-maps})]
+  (let [[record] (safely (jdbc/execute! datasource
+                                        [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
+                                        {:timeout (and :seconds 5)
+                                         :builder-fn rs/as-unqualified-kebab-maps})
+                   :on-error
+                   :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
+                   :track-as ::update-roundup-job!
+                   :circuit-breaker ::insert-job-execution
+                   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+                   :max-retries 5)]
     (when-not record
       (throw (ex-info "No round-up jobs found." {:type ::st.exception/short-circuit
                                                  :body {:round-up-job round-up-job}})))
@@ -84,12 +98,17 @@
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:args args
                                                          :explanation (me/humanize error)}}))))
-  (-> datasource
-      (jdbc/execute!
-       [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
-       {:timeout 5
-        :builder-fn rs/as-unqualified-kebab-maps})
-      first))
+  (first
+   (safely (jdbc/execute! datasource
+                          [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
+                          {:timeout (and :seconds 5)
+                           :builder-fn rs/as-unqualified-kebab-maps})
+     :on-error
+     :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
+     :track-as ::update-roundup-job!
+     :circuit-breaker ::insert-job-execution
+     :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+     :max-retries 5)))
 
 (defn ->connection-pool
   "Create and configure a `HikariDataSource` connection pool for
@@ -120,19 +139,23 @@
   derived from the provided config."
   [config]
   (when-let [migration-config (migration-config config)]
-    (migratus/migrate migration-config)))
+    (log/trace ::migrate
+      []
+      (migratus/migrate migration-config))))
 
 (defn start
   "Return a closeable configuration map with an initialised datasource,
   SQL query templates, and optionally runs migrations."
   [config]
-  (closeable-map*
-   (-> config
-       (assoc ::datasource (->connection-pool config)
-              :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
-              :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
-              :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
-       (doto migrate))))
+  (log/trace ::start
+    []
+    (closeable-map*
+     (-> config
+         (assoc ::datasource (->connection-pool config)
+                :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
+                :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
+                :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
+         (doto migrate)))))
 
 (comment
   (require '[piotr-yuxuan.service-template.config :as config])

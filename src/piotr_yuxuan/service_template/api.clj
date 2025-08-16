@@ -6,11 +6,13 @@
   serving the API."
   (:require
    [clojure.java.io :as io]
+   [com.brunobonacci.mulog :as log]
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
    [piotr-yuxuan.service-template.core :as core]
    [piotr-yuxuan.service-template.exception :as st.exception]
+   [piotr-yuxuan.service-template.secret :as secret]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
@@ -24,7 +26,6 @@
    [reitit.swagger-ui :as swagger-ui]
    [ring.adapter.jetty :as jetty]
    [ring.middleware.authorization :as authorization]
-   [piotr-yuxuan.service-template.secret :as secret]
    [ring.middleware.reload :as reload]
    [ring.util.http-status :as http-status])
   (:import
@@ -38,12 +39,12 @@
 (defn routes
   "Define the API route structure, including OpenAPI and application
   endpoints."
-  [config]
+  [{:keys [version commit] :as config}]
   [["/openapi.json"
     {:get {:no-doc true
-           :openapi {:info {:title "my-api"
+           :openapi {:info {:title "Starling round-up service"
                             :description (slurp (io/resource "OpenAPI frontpage description.md"))
-                            :version "0.0.1"}
+                            :version (format "%s (commit %s)" version (subs commit 0 7))}
                      :components {:securitySchemes {"bearer" {:type :http
                                                               :scheme "bearer"
                                                               :bearerFormat "JWT"}}}}
@@ -73,8 +74,13 @@
                                  :handler (fn [request]
                                             (let [args (merge (-> request :parameters :body)
                                                               (-> request :authorization (select-keys [:token])))]
-                                              {:status http-status/ok
-                                               :body (core/job config args)}))}}]]])
+                                              (log/with-context {:account-uid (:account-uid args)
+                                                                 :calendar-year (:calendar-year args)
+                                                                 :calendar-week (:calendar-week args)}
+                                                (log/trace ::round-up-job
+                                                  []
+                                                  {:status http-status/ok
+                                                   :body (core/job config args)}))))}}]]])
 
 (defn ->router
   "Build a Ring router with middleware, coercion, and exception
@@ -99,8 +105,6 @@
            :middleware [;; swagger & openapi
                         swagger/swagger-feature
                         openapi/openapi-feature
-                        authorization/wrap-authorization
-                        secret/secret-token-hide
                         ;; query-params & form-params
                         parameters/parameters-middleware
                         ;; content-negotiation
@@ -116,7 +120,9 @@
                         ;; coercing request parameters
                         coercion/coerce-request-middleware
                         ;; multipart
-                        multipart/multipart-middleware]}}))
+                        multipart/multipart-middleware
+                        authorization/wrap-authorization
+                        secret/secret-token-hide]}}))
 
 (defn ->handler
   "Create a Ring handler combining the router and Swagger UI endpoints."
@@ -136,11 +142,14 @@
 (defn start
   "Launch a Jetty server with the API handler on port 3000 and return
   the configuration with the server instance."
-  [config]
-  (closeable-map*
-    (let [server (jetty/run-jetty (fn [request]
-                                    ((reload/wrap-reload (->handler config)) request))
-                                  {:port 3000
-                                   :join? false})]
-      (println "server running in port 3000")
-      (assoc config ::server server))))
+  [{::keys [port] :as config}]
+  (log/trace ::start
+    []
+    (closeable-map*
+     (let [server (jetty/run-jetty (fn [request]
+                                     ((reload/wrap-reload (->handler config)) request))
+                                   {:port port
+                                    :join? false})]
+       (println (format "Server running in port %s." port))
+       (log/log ::running :port port)
+       (assoc config ::server server)))))
