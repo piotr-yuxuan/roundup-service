@@ -16,10 +16,10 @@
 (deftest -request->response-test
   (testing "success, JSON body"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly
-                                  {:status http-status/ok
-                                   :headers {"content-type" "application/json"}
-                                   :body (j/write-value-as-string {:ok true})})]
+      (with-redefs [st.http/-request (constantly
+                                      {:status http-status/ok
+                                       :headers {"content-type" "application/json"}
+                                       :body (j/write-value-as-string {:ok true})})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -28,7 +28,7 @@
 
   (testing "success, no content"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly (http-response/no-content))]
+      (with-redefs [st.http/-request (constantly (http-response/no-content))]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -36,10 +36,10 @@
 
   (testing "success, JSON body with charset"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (fn [_req]
-                                   {:status http-status/ok
-                                    :headers {"content-type" "application/json; charset=utf-8"}
-                                    :body (j/write-value-as-string {:ok true})})]
+      (with-redefs [st.http/-request (fn [_req]
+                                       {:status http-status/ok
+                                        :headers {"content-type" "application/json; charset=utf-8"}
+                                        :body (j/write-value-as-string {:ok true})})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -48,10 +48,10 @@
 
   (testing "success, non-JSON body"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly
-                                  {:status http-status/ok
-                                   :headers {"content-type" "application/html; charset=utf-8"}
-                                   :body "<html/>"})]
+      (with-redefs [st.http/-request (constantly
+                                      {:status http-status/ok
+                                       :headers {"content-type" "application/html; charset=utf-8"}
+                                       :body "<html/>"})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -60,9 +60,10 @@
 
   (testing "error, unknown host"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (fn [{:keys [ignore-unknown-host?]}]
-                                   (is ignore-unknown-host?)
-                                   nil)]
+      (with-redefs [st.http/-request (fn [{:keys [ignore-unknown-host?] :as request}]
+                                       (println request)
+                                       (is ignore-unknown-host?)
+                                       nil)]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -70,10 +71,10 @@
 
   (testing "error, malformed JSON body"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly
-                                  {:status http-status/ok
-                                   :headers {"content-type" "application/json"}
-                                   :body "<html/>"})]
+      (with-redefs [st.http/-request (constantly
+                                      {:status http-status/ok
+                                       :headers {"content-type" "application/json"}
+                                       :body "<html/>"})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -82,9 +83,9 @@
 
   (testing "JSON error body"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly {:status http-status/bad-request
-                                              :headers {"content-type" "application/json"}
-                                              :body (j/write-value-as-string {:error "Entity not found."})})]
+      (with-redefs [st.http/-request (constantly {:status http-status/bad-request
+                                                  :headers {"content-type" "application/json"}
+                                                  :body (j/write-value-as-string {:error "Entity not found."})})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -94,9 +95,9 @@
 
   (testing "client error"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly {:status http-status/bad-request
-                                              :headers {"content-type" "application/json"}
-                                              :body {:error "Entity not found."}})]
+      (with-redefs [st.http/-request (constantly {:status http-status/bad-request
+                                                  :headers {"content-type" "application/json"}
+                                                  :body {:error "Entity not found."}})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
@@ -106,9 +107,9 @@
 
   (testing "server error"
     (binding [safely.core/*sleepless-mode* true]
-      (with-redefs [http/request (constantly {:status http-status/internal-server-error
-                                              :headers {"content-type" "application/json"}
-                                              :body {:error "Internal error."}})]
+      (with-redefs [st.http/-request (constantly {:status http-status/internal-server-error
+                                                  :headers {"content-type" "application/json"}
+                                                  :body {:error "Internal error."}})]
         (is (-> {:method :get
                  :url "http://example.com"}
                 st.http/-request->response
