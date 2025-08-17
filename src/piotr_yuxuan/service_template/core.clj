@@ -1,28 +1,10 @@
 (ns piotr-yuxuan.service-template.core
   (:require
    [piotr-yuxuan.service-template.db :as db]
+   [piotr-yuxuan.service-template.exception :as st.exception]
    [piotr-yuxuan.service-template.math :as st.math]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
-   [reitit.ring.malli])
-  (:import
-   (java.time Period Year ZoneId)
-   (java.time.temporal WeekFields)))
-
-(defn year+week-number->interval
-  "Given ISO year and week number, returns a `[start end)` tuple for
-  that week. The period is P7D (7 days), representing a
-  half-open [start, start+period) range. We consider that a week
-  starts on Monday."
-  ([^long year week]
-   (year+week-number->interval year week (ZoneId/of "Europe/London")))
-  ([^long year week zone]
-   (let [week-fields (WeekFields/ISO)
-         start (-> (.atDay (Year/of year) 1)
-                   (.with (.weekOfYear week-fields) week)
-                   (.with (.dayOfWeek week-fields) 1) ;; Monday
-                   (.atStartOfDay zone))]
-     {:min-timestamp (.toInstant start)
-      :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))})))
+   [reitit.ring.malli]))
 
 (defn select-matching-savings-goal
   "Retrieve the active savings goal matching a given name from Starling
