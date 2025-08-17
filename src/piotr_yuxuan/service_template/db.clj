@@ -139,11 +139,12 @@
 (defn migration-config
   "Return a Migratus configuration map for running database migrations
   if migration is enabled in the config."
-  [{::keys [datasource migrate?]}]
+  [{::keys [migrate?] :as config}]
   (when migrate?
-    {:managed-connection? true
+    {;; Close the connection once the migrations are done.
+     :managed-connection? false
      :store :database
-     :db {:datasource datasource}}))
+     :db {:datasource (->connection-pool config)}}))
 
 (defn migrate
   "Execute pending database migrations using the Migratus configuration
@@ -161,12 +162,11 @@
   (log/trace ::start
     []
     (closeable-map*
-     (-> config
+     (-> (doto config migrate)
          (assoc ::datasource (->connection-pool config)
                 :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
                 :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
-                :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
-         (doto migrate)))))
+                :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))))))
 
 (comment
   (require '[piotr-yuxuan.service-template.config :as config])
