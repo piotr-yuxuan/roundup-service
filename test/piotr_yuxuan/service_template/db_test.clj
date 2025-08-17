@@ -8,6 +8,7 @@
    [safely.core])
   (:import
    (clojure.lang ExceptionInfo)
+   (org.postgresql.util PSQLException)
    (org.testcontainers.containers PostgreSQLContainer)))
 
 (defmethod close! PostgreSQLContainer
@@ -41,7 +42,7 @@
                         :round-up-amount-in-minor-units nil,
                         :calendar-year 2025,
                         :calendar-week 32,
-                        :status "running"}]
+                        :status :status/running}]
           (is (contains? record :last-update-at))
           (is (contains? record :id))
           (is (contains? record :status))
@@ -64,11 +65,26 @@
                         :round-up-amount-in-minor-units 1234
                         :calendar-year 2025
                         :calendar-week 32
-                        :status "running"}]
+                        :status :status/running}]
           (is (contains? record :last-update-at))
           (is (contains? record :id))
           (is (contains? record :status))
           (is (= expected (dissoc record :id :last-update-at :transfer-uid)))))))
+
+  (testing "only one execution job per (year, week, account-uid)"
+    (binding [safely.core/*sleepless-mode* true]
+      (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
+                                                                              :exposed-ports [pg-port]})))
+                  config (db/start (postgres-container->db-config container))]
+        (let [args {:calendar-week 32
+                    :calendar-year 2025
+                    :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
+          ;; First insert
+          (db/insert-roundup-job! config args)
+          ;; Second attempt
+          (is (thrown-with-msg? PSQLException
+                                #"ERROR: duplicate key value violates unique constraint \"unique_week_per_account\""
+                                (db/insert-roundup-job! config args)))))))
 
   (testing "bad argument"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -104,7 +120,7 @@
                                                                        :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                                        :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                                                        :round-up-amount-in-minor-units 1234
-                                                                       :status "running"}))))]
+                                                                       :status :status/running}))))]
         (is (= (ex-data ex)
                {:type ::st.exception/short-circuit
                 :body {:round-up-job {:calendar-week 32
@@ -112,7 +128,7 @@
                                       :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                       :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
                                       :round-up-amount-in-minor-units 1234
-                                      :status "running"}}})))))
+                                      :status :status/running}}})))))
 
   (testing "partial update not allowed"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
@@ -137,6 +153,33 @@
                                        :round-up-amount-in-minor-units ["missing required key"]
                                        :status ["missing required key"]}}}))))))
 
+  (testing "invalid status"
+    (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
+                                                                            :exposed-ports [pg-port]})))
+                config (db/start (postgres-container->db-config container))]
+      (let [expected {:calendar-week 32
+                      :calendar-year 2025
+                      :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"}]
+        (binding [safely.core/*sleepless-mode* true]
+          (db/insert-roundup-job! config expected))
+        (let [ex (is (thrown-with-msg? ExceptionInfo #"Invalid named parameters"
+                                       (binding [safely.core/*sleepless-mode* true]
+                                         (db/update-roundup-job! config {:calendar-week 32
+                                                                         :calendar-year 2025
+                                                                         :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
+                                                                         :round-up-amount-in-minor-units 1234
+                                                                         :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
+                                                                         :status :invalid-status}))))]
+          (is (= (ex-data ex)
+                 {:type ::st.exception/short-circuit
+                  :body {:round-up-job {:calendar-week 32,
+                                        :calendar-year 2025,
+                                        :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a",
+                                        :round-up-amount-in-minor-units 1234,
+                                        :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb",
+                                        :status :invalid-status},
+                         :explanation {:status ["should be either :status/running, :status/completed, :status/insufficient-funds or :status/failed"]}}}))))))
+
   (testing "happy path"
     (with-open [container (closeable-map/closeable-map (tc/start! (tc/init {:container (PostgreSQLContainer. "postgres:18beta2")
                                                                             :exposed-ports [pg-port]})))
@@ -152,7 +195,7 @@
                                                   :account-uid #uuid "b9dcaf8a-ef55-4f3a-bbbf-a36b8ee6674a"
                                                   :round-up-amount-in-minor-units 1234
                                                   :savings-goal-uid #uuid "8c32435a-f947-4a60-a420-b4a798e186cb"
-                                                  :status "running"}))
+                                                  :status :status/running}))
                 :round-up-amount-in-minor-units
                 (= 1234)))))))
 
