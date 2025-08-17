@@ -10,4 +10,4 @@
 
 ;; ---------------------------------------------------------
 
-#kaocha/v1 {}
+#kaocha/v1 {:plugins [:kaocha.plugin/cloverage]}
