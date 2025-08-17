@@ -2,8 +2,8 @@
   (:require
    [clojure.test :refer [deftest is testing]]
    [piotr-yuxuan.service-template.api :as api]
-   [ring.util.http-status :as http-status]
-   [piotr-yuxuan.service-template.core :as core])
+   [piotr-yuxuan.service-template.core :as core]
+   [ring.util.http-status :as http-status])
   (:import
    (java.time Instant ZoneId)))
 
@@ -45,11 +45,13 @@
     (let [now (Instant/parse "2025-01-01T00:00:00Z")]
       (is (= {:status http-status/bad-request
               :body {:message "Week should be in the past.",
-                     :args {:savings-goal-name nil,
+                     :args {:calendar-year 2025
+                            :calendar-week 43
                             :min-timestamp (Instant/parse "2025-10-19T23:00:00Z")
                             :max-timestamp (Instant/parse "2025-10-27T00:00:00Z")
                             :now (Instant/parse "2025-01-01T00:00:00Z")}}}
-             (api/roundup-handler {} now {:parameters {:body {:calendar-year 2025 :calendar-week 43}}})))))
+             (api/roundup-handler {} now {:parameters {:body {:calendar-year 2025
+                                                              :calendar-week 43}}})))))
   (testing "calls core/job for a week in the past"
     (let [now (Instant/parse "2025-08-28T13:37:00Z")
           expected-body {:message "Success!"}]
