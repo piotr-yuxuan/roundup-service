@@ -6,19 +6,19 @@ the total to a savings goal.
 
 ## Core features
 
-- **Automated savings** calculates the total round-up from a user's
+- Automated savings: calculates the total round-up from a user's
   transactions for a given week and transfers the amount to a savings
   goal.
-- **Idempotent and safe** guarantees that a round-up transfer for a
+- Idempotent and safe: guarantees that a round-up transfer for a
   specific account and week is processed at most once, preventing
   transactions being processed twice.
-- **Resilient by design** built with automated retries and a circuit
+- Resilient by design: built with automated retries and a circuit
   breaker around the dabase and the Starling API to gracefully handle
   API rate limits and temporary network failures.
-- **Fully Observable** includes a pre-configured monitoring and
-  tracing stack (Prometheus, Grafana, Tempo) for immediate insight
-  into performance and behavior.
-- **Containerized** packaged with Docker for a production-ready
+- Fully Observable: includes a pre-configured monitoring and tracing
+  stack (Prometheus, Grafana, Tempo) for immediate insight into
+  performance and behavior.
+- Containerized: packaged with Docker for a production-ready
   deployment that stays consistent across different environment.
 
 <details><summary>Expand traces of the service starting</summary>
