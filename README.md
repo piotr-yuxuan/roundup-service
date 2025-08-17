@@ -451,11 +451,15 @@ docker buildx build \
 
 ### Push a new version to the container registry
 
+Update the version file and create a new commit and tag.
+
 ``` zsh
 VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 
 echo $GITHUB_PAT | docker login ghcr.io -u piotr-yuxuan --password-stdin
 docker push ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION}
+
+git push --atomic origin main ${VERSION}
 ```
 
 ## Notes on the Starling API
