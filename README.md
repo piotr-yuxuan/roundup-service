@@ -50,7 +50,7 @@ machine.
 
 ### Running the service
 
-1. **Start the entire stack** with a single command from the root of the repository:
+Start local services:
 
 ```zsh
 docker compose up
@@ -60,17 +60,41 @@ This command downloads the necessary images and starts the round-up
 service, a PostgreSQL database, Prometheus, Grafana, and other
 monitoring tools.
 
-2. The following services are now available on your local machine:
-  - **Starling round-up service**: http://localhost:3000
-  - **Grafana** (dashboards): http://localhost:3001
-  - **Prometheus** (metrics): http://localhost:9090
-  - **Adminer** (database GUI): http://localhost:5431
-  - **PostgreSQL**: http://localhost:5432
+The following services are then available on your local machine:
+- **Starling round-up service**: http://localhost:3000
+- **Grafana** (dashboards): http://localhost:3001
+- **Prometheus** (metrics): http://localhost:9090
+- **Adminer** (database GUI): http://localhost:5431
+- **PostgreSQL**: http://localhost:5432
 
-3. **Trigger a round-up job**. Go to http://localhost:3000, and
-   authenticate with a token from the Starling API. This idempotent
-   endpoint will calculate the round-up for the specified week and
-   transfer it to a savings goal.
+Start this service in a Docker container:
+
+``` zsh
+touch ./log.json
+
+docker run \
+    --network service-template_default \
+    -t -p 3000:3000 \
+    --volume "$PWD/log.json":/app/log.json:rw \
+    localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
+    --show-config \
+    --db-hostname "postgres" \
+    --db-migrate \
+    --prometheus-push-url "http://pushgateway:9091" \
+    --zipkin-url "http://tempo:9411" \
+    --starling-url "https://api-sandbox.starlingbank.com/api" \
+    --allow-current-week
+```
+
+Any option appended at the end of the command line above is passed
+down to the uberjar. Remove the `--show-config` to get it to actully
+run instead of just displaying the CLI help and exit. Enabling
+`--allow-current-week` may yield partial roundup, so I would allow not
+to use it, but it may help testing.
+
+Finally, go to http://localhost:3000, and authenticate with a token
+from the Starling API. This idempotent endpoint will calculate the
+round-up for the specified week and transfer it to a savings goal.
 
 ### Viewing the observability stack
 
@@ -78,14 +102,19 @@ No extra configuration is needed. Anonymous login with admin rights is
 enabled in Grafana for ease of access. You can immediately explore the
 pre-configured dashboards for insight into the service's behavior.
 
-* **Application traces**: Navigate to Grafana http://localhost:3001 to
+- **Monitoring and alerting** Go http://localhost:9090 to access
+  Prometheus.
+- **Application traces**: Navigate to Grafana http://localhost:3001 to
   see a PostgreSQL dashboard and traces for the running service.
   Before releasing to production, dashboard for JVM metrics and other
   metrics should be added.
-* **Explore the database**: Adminer, reachable on
+- **Explore the database**: Adminer, reachable on
   http://localhost:5431, is a lightweight database UI and management
-  layer. You can connect to the PostgreSQL instance using the
-  credentials provided in the development section below.
+  layer. You can connect to the PostgreSQL instance using these
+  credentials:
+  - User: user
+  - Password: password
+  - Database: database
 
 ## Architectural overview
 
