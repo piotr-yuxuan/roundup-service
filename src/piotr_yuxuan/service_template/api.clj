@@ -69,7 +69,8 @@
                        :calendar-week (:calendar-week args)}
       (log/trace ::round-up-job
         []
-        (if (.isAfter ^Instant max-timestamp now)
+        (if (or (and (:business/allow-current-week? config) (.isAfter ^Instant min-timestamp now))
+                (and (not (:business/allow-current-week? config)) (.isAfter ^Instant max-timestamp now)))
           (do (log/log ::week-not-in-the-past :args args)
               {:status http-status/bad-request
                :body {:message "Week should be in the past."

@@ -53,6 +53,9 @@
                 :arg-number 0}]]
 
     [::api/port [:int {:default 3000, :short-option "-p", :long-option "--port"}]]
+    [:business/allow-current-week? [:boolean {:default false
+                                              :long-option "--allow-current-week"
+                                              :arg-number 0}]]
 
     [::logger/publisher-names [:set {:default #{:file-json :jvm-metrics :prometheus :zipkin}} keyword?]]
     [::logger/prometheus-push-gateway [:string {:default "http://localhost:9091", :long-option "--prometheus-push-url"}]]

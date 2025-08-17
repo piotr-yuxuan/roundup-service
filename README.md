@@ -147,12 +147,15 @@ docker run \
     --db-migrate \
     --prometheus-push-url "http://pushgateway:9091" \
     --zipkin-url "http://tempo:9411" \
-    --starling-url "https://api-sandbox.starlingbank.com/api"
+    --starling-url "https://api-sandbox.starlingbank.com/api" \
+    --allow-current-week
 ```
 
 Any option appended at the end of the command line above is passed
 down to the uberjar. Remove the `--show-config` to get it to actully
-run instead of just displaying the CLI help and exit.
+run instead of just displaying the CLI help and exit. Enabling
+`--allow-current-week` may yield partial roundup, so I would
+allow not to use it, but it may help testing.
 
 ### Prometheus (monitoring and alerting)
 
