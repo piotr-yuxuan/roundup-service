@@ -33,13 +33,9 @@ the total to a savings goal.
 
 </details>
 
-<details><summary>Expand a screeenshot of Open API UI</summary>
+Screeenshot of Open API UI
 
-![](/doc/Swagger UI.png)
-
-</details>
-
-
+![](/doc/swagger-ui.png)
 
 
 ## 👋 Quick start for reviewers
