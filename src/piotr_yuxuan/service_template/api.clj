@@ -7,18 +7,19 @@
   (:require
    [clojure.java.io :as io]
    [com.brunobonacci.mulog :as log]
+   [malli.core]
    [malli.util :as mu]
    [muuntaja.core :as m]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [close! closeable-map*]]
    [piotr-yuxuan.service-template.core :as core]
    [piotr-yuxuan.service-template.exception :as st.exception]
+   [piotr-yuxuan.service-template.math :as st.math]
    [piotr-yuxuan.service-template.secret :as secret]
    [reitit.coercion.malli]
    [reitit.dev.pretty :as pretty]
    [reitit.openapi :as openapi]
    [reitit.ring :as ring]
    [reitit.ring.coercion :as coercion]
-   [reitit.ring.malli]
    [reitit.ring.middleware.multipart :as multipart]
    [reitit.ring.middleware.muuntaja :as muuntaja]
    [reitit.ring.middleware.parameters :as parameters]
@@ -40,6 +41,22 @@
 (defmethod close! Server
   [x]
   (.stop ^Server x))
+
+(def RoundupJobExecution
+  ;; API schema
+  (malli.core/schema
+   [:map {:description "A round-up job execution as recorded by the service."}
+    [:id {:optional true} uuid?]
+    [:account-uid uuid?]
+    [:savings-goal-uid {:optional true} [:maybe uuid?]]
+    [:round-up-amount-in-minor-units {:optional true} [:maybe st.math/NonNegInt64]]
+    [:calendar-year st.math/NonNegInt64]
+    [:calendar-week st.math/NonNegInt64]
+    [:status {:optional true} [:enum
+                               :status/running
+                               :status/completed
+                               :status/insufficient-funds
+                               :status/failed]]]))
 
 (defn year+week-number->interval
   "Given ISO year and week number, returns a `[start end)` tuple for
@@ -96,22 +113,24 @@
 
    ["/api/v0" {:tags #{"Trigger round up"}
                :openapi {:security [{"bearer" []}]}}
-    ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for the week starting Monday midnight."
+    ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for a given week."
                                  :parameters {:body [:map
-                                                     [:calendar-year {:title "X parameter"
-                                                                      :description "Description for X parameter"
+                                                     [:calendar-year {:title "Calendar year"
+                                                                      :description "Calendar year of the week you want to round up."
                                                                       :json-schema/default 2025}
                                                       pos-int?]
-                                                     [:calendar-week {:title "X parameter"
-                                                                      :description "Description for X parameter"
+                                                     [:calendar-week {:title "Calendar week"
+                                                                      :description "Calendar week, starting on Monday midnight, and finishing Monday midnight of the following week."
                                                                       :json-schema/default 32}
                                                       [:int {:min 1 :max 53}]]
                                                      [:savings-goal-name {:optional true
-                                                                          :title "X parameter"
-                                                                          :description "Description for X parameter"
+                                                                          :title "Name of the target savings goal"
+                                                                          :description "If you provide this parameter, the round up amount will be added to the savings goal of this name, or we will create one."
                                                                           :json-schema/default "Round it up!"}
                                                       [:string {:min 1 :max 100}]]]}
-                                 :responses {} ;; Populate with different error classes
+                                 :responses {http-status/ok {:body RoundupJobExecution}
+                                             http-status/bad-gateway {:body [:map {:closed false :description "Something was wrong with the services we depend on like the Starling API or our database."}]}
+                                             http-status/bad-request {:body [:map {:closed false :description "The request is not semantically correct."}]}}
                                  :handler (fn [request] (roundup-handler config (Instant/now) request))}}]]])
 
 (defn ->router
