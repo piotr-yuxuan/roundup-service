@@ -1,91 +1,403 @@
-test
+# Starling round-up service
 
-# `com.github.piotr-yuxuan/service-template`
+A resilient and observable microservice, built in Clojure, that
+automates weekly savings by rounding up transactions and transferring
+the total to a savings goal.
 
-## Design choices
+## Core features
 
-### Assigment
+- **Automated savings** calculates the total round-up from a user's
+  transactions for a given week and transfers the amount to a savings
+  goal.
+- **Idempotent and safe** guarantees that a round-up transfer for a
+  specific account and week is processed at most once, preventing
+  transactions being processed twice.
+- **Resilient by design** built with automated retries and a circuit
+  breaker around the dabase and the Starling API to gracefully handle
+  API rate limits and temporary network failures.
+- **Fully Observable** includes a pre-configured monitoring and
+  tracing stack (Prometheus, Grafana, Tempo) for immediate insight
+  into performance and behavior.
+- **Containerized** packaged with Docker for a production-ready
+  deployment that stays consistent across different environment.
 
-> We'd like you to develop a “round-up” feature for Starling customers
-> using our public developer API that is available to all customers
-> and partners.
->
-> For a customer, take all the transactions in a given week and round
-> them up to the nearest pound. For example with spending of £4.35,
-> £5.20 and £0.87, the round-up would be £1.58. This amount should
-> then be transferred into a savings goal, helping the customer save
-> for future adventures.
+<details><summary>Expand traces of the service starting</summary>
 
-For simplicity we make the following assumptions:
+![](/doc/container-start-traces.png)
 
-- We consider that a week starts on a Monday.
-- We understand that the user will input a calendar week.
-- The input week is in the past, but that is a business requirement
-  that could be changed.
-- We only consider settled outgoing transactions on the default
-  category (**not** *spending category*) of the primary account first
-  created.
-- We allow only one round-up job per calendar week and per account.
-  This job may be retried if not in a terminal state (failed,
-  success), for example if they were insufficient funds when the
-  transfer was attempted.
-- Rounding up over non-overlapping periods in the past allows to keep
-  the design simple. However, maybe a next iteration would be to allow
-  overlapping round-ups so we can catch transactions that have been
-  settled between two executions.
-- We acknowledge the path =/api/v2/feed/account/{accountUid}/round-up=
-  for operations on the account round-up goal. However, the assignment
-  mentions a transfer to a savings goal. We consider this task about a
-  new implementation, not using this existing feature.
-- Since the API offers no obvious paging mechanism, we consider that
-  retrieving the feed of transactions is always going to return
-  reasonable payload of a manageable size.
-- We round up all the settled transactions for a week and transfer
-  this amount to one savings goal. The OpenAPI spec describes the
-  entity =FeedItem= with attribute =roundUp= of type
-  =AssociatedFeedRoundUp= but there are no obvious endpoints
+</details>
 
-### Choice of language
+<details><summary>Expand traces for the round-up endpoint</summary>
 
-I really enjoyed my first interview during which we dived into my
-experience of the JVM, Python, Java, and Clojure. As it happened, we
-talked about
-[closeable-map](https://cljdoc.org/d/piotr-yuxuan/closeable-map), a
-macro-heavy personal project I designed.
+![](/doc/round-up-endpoint-traces-with-nonzero-amount.png)
+
+</details>
+
+<details><summary>Expand a screeenshot of Open API UI</summary>
+
+![](/doc/Swagger UI.png)
+
+</details>
+
+
+
+
+## 👋 Quick start for reviewers
+
+This section provides the fastest way to get the service and its full
+observability stack and dependencies up and running.
+
+### Prerequisites
+
+You will need **Docker** and **Docker Compose** installed on your
+machine.
+
+### Running the service
+
+1. **Start the entire stack** with a single command from the root of the repository:
+
+```zsh
+docker compose up
+```
+
+This command downloads the necessary images and starts the round-up
+service, a PostgreSQL database, Prometheus, Grafana, and other
+monitoring tools.
+
+2. The following services are now available on your local machine:
+  - **Starling round-up service**: http://localhost:3000
+  - **Grafana** (dashboards): http://localhost:3001
+  - **Prometheus** (metrics): http://localhost:9090
+  - **Adminer** (database GUI): http://localhost:5431
+  - **PostgreSQL**: http://localhost:5432
+
+3. **Trigger a round-up job**. Go to http://localhost:3000, and
+   authenticate with a token from the Starling API. This idempotent
+   endpoint will calculate the round-up for the specified week and
+   transfer it to a savings goal.
+
+### Viewing the observability stack
+
+No extra configuration is needed. Anonymous login with admin rights is
+enabled in Grafana for ease of access. You can immediately explore the
+pre-configured dashboards for insight into the service's behavior.
+
+* **Application traces**: Navigate to Grafana http://localhost:3001 to
+  see a PostgreSQL dashboard and traces for the running service.
+  Before releasing to production, dashboard for JVM metrics and other
+  metrics should be added.
+* **Explore the database**: Adminer, reachable on
+  http://localhost:5431, is a lightweight database UI and management
+  layer. You can connect to the PostgreSQL instance using the
+  credentials provided in the development section below.
+
+## Architectural overview
+
+### System diagram
+
+This is a high-level view of the service and its interactions with the
+Starling API and the local observability stack and dependant services
+like Starling API and the database.
+
+<details><summary>Expand</summary>
+
+``` mermaid
+graph TD
+    subgraph Client
+        A[User Action] --> B{Round-up Service API};
+    end
+
+    subgraph Round-up service
+        B -- /api/v0/trigger-round-up --> C[core/job];
+        C --> D{Starling API};
+        C --> E{Database};
+    end
+
+    subgraph Observability
+        B --> F[mulog];
+        F --> G[Prometheus/Grafana];
+        F --> H[Tempo];
+    end
+
+    subgraph Starling API
+        D -- GET /accounts --> I[Primary Account];
+        D -- GET /savings-goals --> J[Savings Goals];
+        D -- GET /settled-transactions-between --> K[Transactions];
+        D -- PUT /add-money --> L[Add Money to Savings Goal];
+    end
+
+    subgraph Database
+        E -- SELECT/INSERT/UPDATE --> M[roundup_job_execution];
+    end
+```
+
+</details>
+
+### Sequence diagram for a round-up job
+
+<details><summary>Expand</summary>
+
+``` mermaid
+sequenceDiagram
+    participant U as User
+    participant RS as Round-up Service
+    participant SA as Starling API
+    participant DB as Database
+
+    U->>RS: POST /api/v0/trigger-round-up
+    RS->>SA: GET /accounts
+    SA-->>RS: Primary Account
+    RS->>DB: SELECT/INSERT roundup_job_execution
+    DB-->>RS: Job Execution Record
+    alt If job not in terminal state
+        RS->>SA: GET /settled-transactions-between
+        SA-->>RS: Transactions
+        RS->>RS: Calculate round-up amount
+        RS->>DB: UPDATE roundup_job_execution
+        RS->>SA: GET /savings-goals
+        SA-->>RS: Savings Goals
+        alt If no matching savings goal
+            RS->>SA: PUT /savings-goals
+            SA-->>RS: New Savings Goal
+        end
+        RS->>DB: UPDATE roundup_job_execution
+        RS->>SA: GET /confirmation-of-funds
+        SA-->>RS: Confirmation
+        alt If sufficient funds
+            RS->>SA: PUT /add-money
+            SA-->>RS: Transfer Confirmation
+            RS->>DB: UPDATE roundup_job_execution (status: completed)
+        else Insufficient funds
+            RS->>DB: UPDATE roundup_job_execution (status: insufficient-funds)
+        end
+    end
+    RS-->>U: Job Execution Record
+```
+
+</details>
+
+## Technical decisions, and rationale
+
+This section highlights the most important design choices made to
+ensure the service is robust, secure, and maintainable.
+
+### Data integrity and precise numeric types
+
+> Monetary values are represented as `BIGINT` in PostgreSQL and `long`
+> in the application, storing amounts in minor units (e.g., pence).
+> This is enforced by the `NonNegInt64` schema.
+
+To avoid the precision and rounding errors inherent in floating-point
+arithmetic, which are unacceptable in financial applications. This is
+a standard, robust practice for ensuring correctness. The rounding
+logic itself is explicitly tested to handle various cases.
+
+### Idempotency and state management
+
+> Idempotency is enforced at the database layer with a `UNIQUE`
+> constraint on the `account_uid`, `calendar_year`, and
+> `calendar_week`. The unique `transfer_uid` for the Starling API call
+> is generated by the database and the service user is prevented from
+> updating it, ensuring it is immutable once created.
+
+This database-centric approach provides the strongest guarantee
+against race conditions and prevents duplicate transfers if an
+operation is retried. It makes the system's state recovery simple and
+reliable, which is critical for a financial service. The application
+logic first attempts to find an existing job and only creates a new
+one if it doesn't exist, handling the idempotency check gracefully.
+
+### Resilience and interaction with other services
+
+> All external API calls and database queries are wrapped with the
+> `safely` library, which implements automated retries (with
+> exponential backoff) and a circuit breaker.
+
+This resilience layer makes the service robust against transient
+network failures or database connection issues, which is essential for
+a reliable financial process.
+
+I intended at first to retrieve settled transactions day-by-day
+instead of fetching a full week of transactions in a single API call
+to reduce the pressure on memory, but it should be a planned
+development if I were to put this code in production.
+
+### Configuration and secret management
+
+> Application configuration is defined by a `malli` schema and parsed
+> from command-line arguments and environment variables using the
+> `malli-cli` library. Sensitive values like API tokens are wrapped in
+> a custom `Secret` type that prevents their value from being exposed
+> in logs by overriding the `toString` method.
+
+This provides a single source of truth for configuration, complete
+with validation, default values, and clear help messages. The
+secret-wrapping strategy is a critical security measure to prevent
+accidental leakage of sensitive credentials in logs or monitoring
+systems. The middleware `secret/secret-token-reveal` ensures that
+secrets are only revealed at the last moment before an external API
+call.
+
+### Short-circuiting on unexpected state with exceptions
+
+> The compatibility of the current Starling API version with the
+> version used for development is tested each time the service starts,
+> and an exception will be trigger on any incompatible change. The
+> application is designed to follow a narrow happy path. Any
+> deviation, such as an unexpected response schema from the Starling
+> API or a database error, results in an exception that short-circuits
+> the current operation. A central exception middleware catches these
+> exceptions and translates them into descriptive HTTP error
+> responses.
+
+This approach avoids complex conditional logic for every possible
+failure scenario. Instead of attempting to handle countless edge
+cases, the system fails fast and predictably. This makes the core
+logic cleaner, more readable, and easier to maintain, while providing
+clear, structured error information to the client. Exceptions are not
+used for control flow as seen in `core/job`.
+
+### Testing strategy
+
+> To ensure the reliability and correctness of the service, I
+> implemented a comprehensive, multi-layered testing strategy.
+> Alongisde the OpenAPI check and tightened API response, my goal was
+> both to get a high level of certainty and validate the behavior of
+> the system under realistic conditions.
+
+-  **Unit and integration tests**: the entire codebase is covered by
+   an extensive suite of tests that validate everything from
+   individual functions to the interactions between different
+   components. This includes testing the core business logic
+   (`core_test.clj`), the API layer (`api_test.clj`), and utility
+   functions (`math_test.clj`, `secret_test.clj`).
+
+-  **Database integration testing with Testcontainers**: all database
+   interactions are tested against a real, ephemeral PostgreSQL
+   database instance. The `db_test.clj` test suite uses
+   `testcontainers` to spin up a fresh database for each test run.
+   This ensures that the SQL queries are correct and that the database
+   schema (including constraints for idempotency) behaves exactly as
+   it would in production, without the flakiness of mocks.
+
+-  **Generative testing**: I used a bit of generative testing with
+   `malli.generator`. I learned from experience that this approach is
+   highly effective at uncovering edge cases that might be missed by
+   example-based tests alone.
+
+-  **API contract validation**: The interactions with the Starling API
+   are tested to ensure that the requests and responses conform to the
+   expected schemas. This prevents bugs that could arise from
+   unexpected API changes or misunderstandings of the API contract.
+
+This guarantees that each component of the service is not only
+functionally correct on its own, but that the system as a whole is
+robust, reliable, and ready for production.
+
+``` zsh
+$ bin/kaocha --plugin cloverage
+
+|---------------------------------------------------+---------+---------|
+|                                         Namespace | % Forms | % Lines |
+|---------------------------------------------------+---------+---------|
+|                 piotr-yuxuan.service-template.api |    9.64 |   20.37 |
+|              piotr-yuxuan.service-template.config |   49.87 |   75.00 |
+|                piotr-yuxuan.service-template.core |   94.03 |   94.52 |
+|                  piotr-yuxuan.service-template.db |   77.85 |   96.77 |
+|           piotr-yuxuan.service-template.exception |   19.70 |   53.33 |
+|                piotr-yuxuan.service-template.http |   65.85 |   91.04 |
+|              piotr-yuxuan.service-template.logger |    1.39 |   10.71 |
+|                piotr-yuxuan.service-template.main |    0.99 |   11.11 |
+|                piotr-yuxuan.service-template.math |   87.67 |   89.47 |
+|        piotr-yuxuan.service-template.openapi-spec |   15.38 |   44.44 |
+|              piotr-yuxuan.service-template.secret |   56.82 |   53.33 |
+| piotr-yuxuan.service-template.starling-api.entity |  100.00 |  100.00 |
+|    piotr-yuxuan.service-template.starling-api.ops |   67.80 |   90.28 |
+|---------------------------------------------------+---------+---------|
+|                                         ALL FILES |   55.84 |   70.87 |
+|---------------------------------------------------+---------+---------|
+```
+
+### Using Clojure
+
+> A Clojure-based implementation.
+
+In my previous interview I was asked about personal projects. I
+believe I talked about two projects I designed and implemented end to
+end: [closeable-map](https://cljdoc.org/d/piotr-yuxuan/closeable-map),
+a macro-heavy application state management, and
+[malli-cli](https://github.com/piotr-yuxuan/malli-cli) for command
+line argument parsing and configuration validation.
 
 Since the recruiter I got in touch with confirmed that I could use any
 language, I thought that I would follow up in this take-home task and
-demonstrate this application state management library.
+demonstrate these libraries.
 
-### Choice of numeric type
+### Building a light Docker image
 
-~I initially picked up FLOAT and it was fine~… no, of course I was
-conscious that inexact, variable-precision data types are recipe for
-disaster when handling money. I contemplated using both DECIMAL(12,0)
-and BIGINT in PostgreSQL:
+Beyond just functionality, this service was designed with
+production-readiness in mind, particularly concerning the size and
+security of its Docker image.
 
-[PostgreSQL DECIMAL(12,0)](https://www.postgresql.org/docs/current/datatype-numeric.html)
-- Type: exact numeric with fixed precision and scale
-- Storage size: varies dynamically based on the number of digits; typically requires more storage than integer types.
-- Value range: from −999,999,999,999 to +999,999,999,999 (12 digits).
+- The `Dockerfile` uses a multi-stage build to separate the build
+  environment from the final runtime environment. This ensures that
+  build-time dependencies, source code, and intermediate artifacts are
+  not included in the final image, significantly reducing its size.
 
-[PostgreSQL BIGINT](https://www.postgresql.org/docs/current/datatype-numeric.html)
- - Type: signed 64-bit integer
- - Storage size: 8 bytes
- - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+- Instead of shipping a full JDK or a generic JRE, the build process
+  uses `jlink` to create a custom, minimal Java runtime. It analyzes
+  the compiled application to include only the necessary modules from
+  the JDK. This significantly reduces the image size and minimizes the
+  attack surface by excluding unused components.
 
-After careful comparison of Java numeric type API and datatypes, I've
-chosen to settles for long integers, as this precise type has
-conveniently the same value range as =BIGINT=.
+- The final image is built `FROM scratch`, which is an empty, minimal
+  base image. This is the smallest possible starting point for a
+  container, containing no operating system, libraries, or shells.
 
-[Java long](https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html)
- - Type: signed 64-bit two's complement integer
- - Storage size: 8 bytes
- - Value range: from −9,223,372,036,854,775,808 to +9,223,372,036,854,775,807
+-  On static linking: I'm in no way an expert on this matter, but
+   because the `scratch` image is empty, I discovered that a dynamic
+   linked (`ld-musl-x86_64.so.1` from the Alpine builder) and a
+   required shared library (`libjli.so`) need to be copied into the
+   final image.
 
-If business required that we use so-called banker's rounding, then I
-would redesign the code around the use
-`java.math.RoundingMode/HALF_EVEN`.
+By employing these techniques, the final Docker image is optimized to
+be as small and secure as possible, making it faster fast to deploy
+and harder to exploit.
+
+``` zsh
+$ docker image ls ghcr.io/piotr-yuxuan/starling-roundup-service --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
+
+REPOSITORY                                      TAG       SIZE
+ghcr.io/piotr-yuxuan/starling-roundup-service   1.0.0     106MB
+```
+
+
+## Getting starting locally
+
+Prerequisites:
+* Docker is used to run the local development stack, including the
+  database and monitoring tools.
+* The `clojure` command-line tool is required to open a REPL, build
+  the uberjar, and run tests.
+* This repository is stored on GitHub, so `git` is expected.
+
+### Running tests
+
+You can execute the entire test suite, including the database
+integration tests, with a single command. The project uses `kaocha` as
+its test runner.
+
+To reload tests on every changes:
+
+```zsh
+$ bin/kaocha --watch
+
+[(..................................)(.........................)(................................................................................................................................................................................................................................................................)(.....................)(.)(................)(.......)(........)]
+26 tests, 367 assertions, 0 failures.
+```
+
+In order to ignore the slower tests using testcontainers, add:
+`--skip-meta :test-containers`.
 
 ## Notes on the Starling API
 
@@ -95,151 +407,16 @@ take-home assigment part of an interview process, I shall note a
 couple of observations that I'd be glad to fix on day 1 if allowed to
 :)
 
-- The description of the =GET= operation on
-  =/api/v2/feed/account/{accountUid}/round-up= contains « Returns
-  **the the** round-up goal »
-- The entity =Currency= is a string of minimum length 1 in
-  =CurrencyAndAmount= but an enum in Account.
-- We can't retrieve the settled transactions per spending category.
-- I'm not aware of a paging mechanism. I
+- There is a small typo in the documentation for the `GET
+  /api/v2/feed/account/{accountUid}/round-up` endpoint: « Returns *the
+  the* round-up goal ».
+- The `Currency` entity is defined as a string in `CurrencyAndAmount`
+  but as an enum in the `Account` entity.
+- There is no apparent mechanism for server-side paging of
+  transactions. Native paging would be a beneficial addition for
+  handling large transaction volumes.
 - This API is a solid level two in the [Richardson's maturity
   model](https://restfulapi.net/richardson-maturity-model/) ranging
-  from zero to three. However, HATEOAS are missing. This means that
-  the API users don't really know what they may do with the
-  =defaultCategory= of the =AccountV2= instances from
-  =/api/v2/accounts=.
-
-## Getting started running this service in Docker
-
-- Run tests
-``` zsh
-bin/kaocha
-```
-
-- Build the Docker image
-``` zsh
-VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
-
-docker buildx build \
-  --build-arg VERSION=${VERSION} \
-  --build-context m2repo=$HOME/.m2/ \
-  --build-context git=./.git/ \
-  --tag localhost/com.github.piotr-yuxuan.service-template:${VERSION} \
-  .
-```
-
-- Start local services:
-
-``` zsh
-docker compose up
-```
-
-- Run it as a Docker container
-
-``` zsh
-touch ./log.json
-
-docker run \
-    --network service-template_default \
-    -t -p 3000:3000 \
-    --volume "$PWD/log.json":/app/log.json:rw \
-    localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
-    --show-config \
-    --db-hostname "postgres" \
-    --db-migrate \
-    --prometheus-push-url "http://pushgateway:9091" \
-    --zipkin-url "http://tempo:9411" \
-    --starling-url "https://api-sandbox.starlingbank.com/api" \
-    --allow-current-week
-```
-
-Any option appended at the end of the command line above is passed
-down to the uberjar. Remove the `--show-config` to get it to actully
-run instead of just displaying the CLI help and exit. Enabling
-`--allow-current-week` may yield partial roundup, so I would
-allow not to use it, but it may help testing.
-
-### Prometheus (monitoring and alerting)
-
-- Browser URL: http://localhost:9090
-
-### Grafana (dashboard visualisation)
-
-- Browser URL: http://localhost:3001
-
-Grafana visualises the metrics collected by Prometheus with dashboards
-configured for PostgreSQL. Anonymous login is enabled with Admin
-rights for ease of access.
-
-### Postgres database
-
-- Browser URL: http://localhost:5431
-- CLI connection (from your local machine if `psql` is installed):
-
-``` zsh
-psql -h localhost -p 5432 -U user -d database
-```
-
-Default credentials are:
-- User: user
-- Password: password
-- Database: database
-
-From a repl you may create a new migration with:
-
-``` clojure
-(migratus/create config "create-user")
-```
-
-See the related namespace.
-
-## Getting started as a developer
-
-Run a test watcher skipping slow tests (when applicable) with:
-
-``` zsh
-bin/kaocha --watch --skip-meta :test-containers
-```
-
-If you don't have Clojure toolchain installed on your machine,
-consider opening a REPL from within a vanilla Docker image and mount
-your local repository as well as the code of this project. The
-following command launches a repl on `localhost:5555`.
-
-``` zsh
-docker run \
-  -it \
-  --rm \
-  -p 5555:5555 \
-  -v "$HOME/.m2":/root/.m2 \
-  -v "$PWD":/usr/src/app \
-  -w /usr/src/app \
-  clojure:temurin-24-alpine \
-  clojure -M:repl
-```
-
-The last line is the `bash` command, and can be replaced by `bash` for
-an interactive shell.
-
-Depending on your specifics, you may need to set a hostname
-`host.docker.internal` to access a service, even maybe to record this
-hostname in `/etc/hosts`. See
-[documentation](https://docs.docker.com/desktop/features/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host).
-
-A couple of dependencies are described in `docker-compose.yml`: a
-PostgreSQL database, monitoring tools like Grafana with provisioned
-dashboards. Launch them with:
-
-``` zsh
-docker compose up
-```
-
-This launches multiple services related to PostgreSQL, monitoring, and
-visualisation. Below are instructions to connect to each service
-either via CLI or through a web browser.
-
-From a repl you may create a new migration with:
-
-``` clojure
-(migratus/create config "create-user")
-```
+  from zero to three. However, HATEOAS are missing. Adding them would
+  make the API more self-discoverable for clients by advertising the
+  possible actions that can be taken from a given resource.
