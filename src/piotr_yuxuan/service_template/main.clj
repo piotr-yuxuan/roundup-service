@@ -5,6 +5,7 @@
   displaying help or printing configuration."
   (:gen-class)
   (:require
+   [com.brunobonacci.mulog :as log]
    [malli.core :as m]
    [malli.error :as me]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
@@ -33,23 +34,25 @@
   configuration, then start the service or exit based on provided
   flags."
   [& args]
-  (let [config (config/load-config args)]
-    (cond (not (m/validate Config config))
-          (do (println "Invalid configuration value"
-                       (me/humanize (m/explain Config config)))
-              (Thread/sleep 60000) ; Leave some time to retrieve the logs.
-              (System/exit 1))
+  (log/trace ::-main
+    []
+    (let [config (config/load-config args)]
+      (cond (not (m/validate Config config))
+            (do (println "Invalid configuration value"
+                         (me/humanize (m/explain Config config)))
+                (Thread/sleep 60000) ; Leave some time to retrieve the logs.
+                (System/exit 1))
 
-          (:show-config? config)
-          (do (println "\nPrint loaded configuration, and then exit.\n")
-              (puget/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
-              (System/exit 0))
+            (:show-config? config)
+            (do (println "\nPrint loaded configuration, and then exit.\n")
+                (puget/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
+                (System/exit 0))
 
-          (:help config)
-          (do (println (malli-cli/summary Config))
-              (System/exit 0))
+            (:help config)
+            (do (println (malli-cli/summary Config))
+                (System/exit 0))
 
-          :else
-          (m/encode Config
-                    (start config)
-                    malli-cli/secret-transformer))))
+            :else
+            (m/encode Config
+                      (start config)
+                      malli-cli/secret-transformer)))))
