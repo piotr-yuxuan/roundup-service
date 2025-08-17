@@ -52,13 +52,6 @@
        (map (comp (partial st.math/round-up-difference 2) :minorUnits :amount))
        (reduce +)))
 
-;; account-uid "595a8a9e-14f8-43fa-a883-4391bfa6c23f"
-;; savings-goal-uid "5f824aa3-5561-4fbe-adfe-7c59bd9f12ff"
-;; transfer-uid "640fc791-a37e-400c-8584-34b2704b0828"
-(defonce transfer-uid (UUID/randomUUID))
-;; week 32: min-timestamp "2025-08-03T23:00:00Z"
-;;          max-timestamp "2025-08-10T23:00:00Z"
-
 (defn add-money-to-savings-goal->status
   [config args job-execution currency]
   (let [args {:token (:token args)
