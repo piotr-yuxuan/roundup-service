@@ -436,6 +436,10 @@ In order to ignore the slower tests using testcontainers, add:
 ``` zsh
 VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 
+# If need be:
+# docker system prune # Standard
+# docker system prune -a # More aggressive.
+
 docker buildx build \
   --build-arg VERSION=${VERSION} \
   --build-context m2repo=$HOME/.m2/ \
