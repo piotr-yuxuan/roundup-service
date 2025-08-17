@@ -247,6 +247,12 @@ sequenceDiagram
 
 </details>
 
+### Namespace dependency graph
+
+This is a graph of the dependency hierarchy of the namespaces of this project.
+
+![](/doc/namespaces.png)
+
 ## Technical decisions, and rationale
 
 This section highlights the most important design choices made to
