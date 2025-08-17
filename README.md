@@ -92,6 +92,10 @@ run instead of just displaying the CLI help and exit. Enabling
 `--allow-current-week` may yield partial roundup, so I would allow not
 to use it, but it may help testing.
 
+Note on the URL provided in the command line: because of the way
+Docker manages networks, the hostname of a service in Docker compose
+is the name of this service in the `docker-compose.yml` file.
+
 Finally, go to http://localhost:3000, and authenticate with a token
 from the Starling API. This idempotent endpoint will calculate the
 round-up for the specified week and transfer it to a savings goal.
