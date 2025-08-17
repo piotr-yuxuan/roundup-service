@@ -164,6 +164,9 @@ graph TD
 
 ### Sequence diagram for a round-up job
 
+The intent of this architecture is to be resilient to a power shutdown
+or network connection at any time on any component of the system.
+
 <details><summary>Expand</summary>
 
 ``` mermaid
