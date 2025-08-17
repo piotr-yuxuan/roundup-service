@@ -1,7 +1,7 @@
 CREATE TYPE roundup_job_status AS ENUM (
     'running',
     'completed',
-    'insufficient_founds',
+    'insufficient_funds',
     'failed'
 );
 --;;
