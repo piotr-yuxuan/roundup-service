@@ -37,6 +37,33 @@ Screeenshot of Open API UI
 
 ![](/doc/swagger-ui.png)
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [Core features](#core-features)
+- [👋 Quick start for reviewers](#-quick-start-for-reviewers)
+  - [Prerequisites](#prerequisites)
+  - [Running the service](#running-the-service)
+  - [Viewing the observability stack](#viewing-the-observability-stack)
+- [Architectural overview](#architectural-overview)
+  - [System diagram](#system-diagram)
+  - [Sequence diagram for a round-up job](#sequence-diagram-for-a-round-up-job)
+- [Technical decisions, and rationale](#technical-decisions-and-rationale)
+  - [Data integrity and precise numeric types](#data-integrity-and-precise-numeric-types)
+  - [Idempotency and state management](#idempotency-and-state-management)
+  - [Resilience and interaction with other services](#resilience-and-interaction-with-other-services)
+  - [Configuration and secret management](#configuration-and-secret-management)
+  - [Short-circuiting on unexpected state with exceptions](#short-circuiting-on-unexpected-state-with-exceptions)
+  - [Testing strategy](#testing-strategy)
+  - [Using Clojure](#using-clojure)
+  - [Building a light Docker image](#building-a-light-docker-image)
+- [Getting starting locally](#getting-starting-locally)
+  - [Running tests](#running-tests)
+  - [Build the Docker image](#build-the-docker-image)
+  - [Push a new version to the container registry](#push-a-new-version-to-the-container-registry)
+- [Notes on the Starling API](#notes-on-the-starling-api)
+
+<!-- markdown-toc end -->
 
 ## 👋 Quick start for reviewers
 
