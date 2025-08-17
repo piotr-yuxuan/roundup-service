@@ -70,13 +70,14 @@ The following services are then available on your local machine:
 Start this service in a Docker container:
 
 ``` zsh
+VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 touch ./log.json
 
 docker run \
     --network service-template_default \
     -t -p 3000:3000 \
     --volume "$PWD/log.json":/app/log.json:rw \
-    ghcr.io/piotr-yuxuan/starling-roundup-service:1.0.1 \
+    ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION} \
     --show-config \
     --db-hostname "postgres" \
     --db-migrate \
