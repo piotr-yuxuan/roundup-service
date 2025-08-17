@@ -16,6 +16,7 @@
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
    [piotr-yuxuan.service-template.exception :as st.exception]
    [piotr-yuxuan.service-template.math :refer [NonNegInt64]]
+   [camel-snake-kebab.core :as csk]
    [safely.core :refer [safely]])
   (:import
    (com.zaxxer.hikari HikariDataSource)
@@ -33,7 +34,15 @@
     [:round-up-amount-in-minor-units {:optional true} [:maybe NonNegInt64]]
     [:calendar-year NonNegInt64]
     [:calendar-week NonNegInt64]
-    [:status {:optional true} [:enum "running" "completed" "insufficient_founds" "failed"]]]))
+    [:status {:optional true} [:enum
+                               :status/running
+                               :status/completed
+                               :status/insufficient-funds
+                               :status/failed]]]))
+
+(defn decode-record
+  [record]
+  (update record :status #(keyword "status" (csk/->kebab-case-string %))))
 
 (defn insert-roundup-job!
   "Validate and insert a new round-up job execution record into the
@@ -46,16 +55,17 @@
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:round-up-job round-up-job
                                                          :explanation (me/humanize error)}}))))
-  (first
-   (safely (jdbc/execute! datasource [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
-                          {:timeout (and :seconds 5)
-                           :builder-fn rs/as-unqualified-kebab-maps})
-     :on-error
-     :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
-     :track-as ::insert-roundup-job!
-     :circuit-breaker ::insert-job-execution
-     :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-     :max-retries 5)))
+  (-> (safely (jdbc/execute! datasource [insert-job-execution account-uid savings-goal-uid round-up-amount-in-minor-units calendar-year calendar-week]
+                             {:timeout (and :seconds 5)
+                              :builder-fn rs/as-unqualified-kebab-maps})
+        :on-error
+        :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
+        :track-as ::insert-roundup-job!
+        :circuit-breaker ::insert-job-execution
+        :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+        :max-retries 5)
+      first
+      decode-record))
 
 (defn update-roundup-job!
   "Validate and update all fields of an existing round-up job execution
@@ -71,7 +81,7 @@
                                                   :body {:round-up-job round-up-job
                                                          :explanation (me/humanize error)}}))))
   (let [[record] (safely (jdbc/execute! datasource
-                                        [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other status) account-uid calendar-year calendar-week]
+                                        [update-job-execution savings-goal-uid round-up-amount-in-minor-units (as-other (csk/->snake_case_string status)) account-uid calendar-year calendar-week]
                                         {:timeout (and :seconds 5)
                                          :builder-fn rs/as-unqualified-kebab-maps})
                    :on-error
@@ -83,7 +93,7 @@
     (when-not record
       (throw (ex-info "No round-up jobs found." {:type ::st.exception/short-circuit
                                                  :body {:round-up-job round-up-job}})))
-    record))
+    (decode-record record)))
 
 (defn find-roundup-job
   "Validate parameters and retrieve a round-up job execution record by
@@ -98,17 +108,18 @@
       (throw (ex-info "Invalid named parameters" {:type ::st.exception/short-circuit
                                                   :body {:args args
                                                          :explanation (me/humanize error)}}))))
-  (first
-   (safely (jdbc/execute! datasource
-                          [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
-                          {:timeout (and :seconds 5)
-                           :builder-fn rs/as-unqualified-kebab-maps})
-     :on-error
-     :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
-     :track-as ::update-roundup-job!
-     :circuit-breaker ::insert-job-execution
-     :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
-     :max-retries 5)))
+  (some-> (safely (jdbc/execute! datasource
+                                 [select_job_execution_by_account_uid_calendar_year_and_week account-uid calendar-year calendar-week]
+                                 {:timeout (and :seconds 5)
+                                  :builder-fn rs/as-unqualified-kebab-maps})
+            :on-error
+            :retryable-error? (comp boolean #{SQLTransientConnectionException} type)
+            :track-as ::update-roundup-job!
+            :circuit-breaker ::insert-job-execution
+            :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 25000]
+            :max-retries 5)
+          first
+          decode-record))
 
 (defn ->connection-pool
   "Create and configure a `HikariDataSource` connection pool for
@@ -128,11 +139,12 @@
 (defn migration-config
   "Return a Migratus configuration map for running database migrations
   if migration is enabled in the config."
-  [{::keys [datasource migrate?]}]
+  [{::keys [migrate?] :as config}]
   (when migrate?
-    {:managed-connection? true
+    {;; Close the connection once the migrations are done.
+     :managed-connection? false
      :store :database
-     :db {:datasource datasource}}))
+     :db {:datasource (->connection-pool config)}}))
 
 (defn migrate
   "Execute pending database migrations using the Migratus configuration
@@ -150,12 +162,11 @@
   (log/trace ::start
     []
     (closeable-map*
-     (-> config
+     (-> (doto config migrate)
          (assoc ::datasource (->connection-pool config)
                 :query/insert-job-execution (slurp (io/resource "queries/insert_job_execution.sql"))
                 :query/update-job-execution (slurp (io/resource "queries/update_job_execution.sql"))
-                :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))
-         (doto migrate)))))
+                :query/select_job_execution_by_account_uid_calendar_year_and_week (slurp (io/resource "queries/select_job_execution_by_account_uid_calendar_year_and_week.sql")))))))
 
 (comment
   (require '[piotr-yuxuan.service-template.config :as config])

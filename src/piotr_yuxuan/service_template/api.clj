@@ -29,12 +29,55 @@
    [ring.middleware.reload :as reload]
    [ring.util.http-status :as http-status])
   (:import
+   (java.time Instant
+              Period
+              Year
+              ZoneId)
+   (java.time.temporal WeekFields)
    (org.eclipse.jetty.server Server)))
 
 ;; Stop a Jetty server instance.
 (defmethod close! Server
   [x]
   (.stop ^Server x))
+
+(defn year+week-number->interval
+  "Given ISO year and week number, returns a `[start end)` tuple for
+  that week. The period is P7D (7 days), representing a
+  half-open [start, start+period) range. We consider that a week
+  starts on Monday."
+  ([^long year week]
+   (year+week-number->interval year week (ZoneId/of "Europe/London")))
+  ([^long year week zone]
+   (let [week-fields (WeekFields/ISO)
+         start (-> (.atDay (Year/of year) 1)
+                   (.with (.weekOfYear week-fields) week)
+                   (.with (.dayOfWeek week-fields) 1) ;; A week starts on a Monday.
+                   (.atStartOfDay zone))]
+     {:min-timestamp (.toInstant start)
+      :max-timestamp (.toInstant (.plus start (Period/ofWeeks 1)))})))
+
+(defn roundup-handler
+  [config ^Instant now request]
+  (let [{:keys [calendar-year calendar-week] :as args} (-> request :parameters :body)
+        {:keys [min-timestamp max-timestamp]} (year+week-number->interval calendar-year calendar-week)
+        args (merge args
+                    {:min-timestamp min-timestamp
+                     :max-timestamp max-timestamp})]
+    (log/with-context {:account-uid (:account-uid args)
+                       :calendar-year (:calendar-year args)
+                       :calendar-week (:calendar-week args)}
+      (log/trace ::round-up-job
+        []
+        (if (.isAfter ^Instant max-timestamp now)
+          (do (log/log ::week-not-in-the-past :args args)
+              {:status http-status/bad-request
+               :body {:message "Week should be in the past."
+                      :args (assoc args :now now)}})
+          {:status http-status/ok
+           :body (core/job config (-> (:authorization request)
+                                      (select-keys [:token])
+                                      (merge args)))})))))
 
 (defn routes
   "Define the API route structure, including OpenAPI and application
@@ -54,33 +97,21 @@
                :openapi {:security [{"bearer" []}]}}
     ["/trigger-round-up" {:post {:summary "This is an idempotent action that triggers a round up for the week starting Monday midnight."
                                  :parameters {:body [:map
-                                                     [:account-uid {:title "X parameter"
-                                                                    :description "Description for X parameter"
-                                                                    :json-schema/default #uuid "595a8a9e-14f8-43fa-a883-4391bfa6c23f"}
-                                                      :uuid]
                                                      [:calendar-year {:title "X parameter"
                                                                       :description "Description for X parameter"
                                                                       :json-schema/default 2025}
                                                       pos-int?]
                                                      [:calendar-week {:title "X parameter"
                                                                       :description "Description for X parameter"
-                                                                      :json-schema/default 33}
+                                                                      :json-schema/default 32}
                                                       [:int {:min 1 :max 53}]]
-                                                     [:savings-goal-name {:title "X parameter"
+                                                     [:savings-goal-name {:optional true
+                                                                          :title "X parameter"
                                                                           :description "Description for X parameter"
                                                                           :json-schema/default "Round it up!"}
                                                       [:string {:min 1 :max 100}]]]}
                                  :responses {} ;; Populate with different error classes
-                                 :handler (fn [request]
-                                            (let [args (merge (-> request :parameters :body)
-                                                              (-> request :authorization (select-keys [:token])))]
-                                              (log/with-context {:account-uid (:account-uid args)
-                                                                 :calendar-year (:calendar-year args)
-                                                                 :calendar-week (:calendar-week args)}
-                                                (log/trace ::round-up-job
-                                                  []
-                                                  {:status http-status/ok
-                                                   :body (core/job config args)}))))}}]]])
+                                 :handler (fn [request] (roundup-handler config (Instant/now) request))}}]]])
 
 (defn ->router
   "Build a Ring router with middleware, coercion, and exception

@@ -1,8 +1,8 @@
 {:paths ["src" "resources"]
  :deps {;; Core language and utilities
         org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself.
-        babashka/process {:mvn/version "0.5.21"} ; Clojure wrapper for java.lang.ProcessBuilder
-
+        babashka/process {:mvn/version "0.6.23"} ; Clojure wrapper for java.lang.ProcessBuilder
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
         ;; Web server and routing
         ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
         ring/ring-jetty-adapter {:mvn/version "1.14.2"} ; Jetty server adapter for Ring.
@@ -42,7 +42,7 @@
         }
  :aliases {:run/service {:main-opts ["-m" "piotr-yuxuan.service-template.main"]}
            :test/env {:extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-                                   org.testcontainers/postgresql {:mvn/version "1.20.0"}}}
+                                   org.testcontainers/postgresql {:mvn/version "1.21.3"}}}
            :dev/reloaded {:extra-paths ["."
                                         "resources"
                                         "dev" "dev-resources"

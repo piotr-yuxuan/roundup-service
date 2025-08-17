@@ -126,6 +126,12 @@ docker buildx build \
   .
 ```
 
+- Start local services:
+
+``` zsh
+docker compose up
+```
+
 - Run it as a Docker container
 
 ``` zsh
