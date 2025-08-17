@@ -67,6 +67,10 @@ The following services are then available on your local machine:
 - **Adminer** (database GUI): http://localhost:5431
 - **PostgreSQL**: http://localhost:5432
 
+See instructions on the [container
+registry](https://github.com/piotr-yuxuan/starling-roundup-service/pkgs/container/starling-roundup-service)
+on how to authenticate.
+
 Start this service in a Docker container:
 
 ``` zsh
