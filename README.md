@@ -1,3 +1,5 @@
+test
+
 # `com.github.piotr-yuxuan/service-template`
 
 ## Design choices
