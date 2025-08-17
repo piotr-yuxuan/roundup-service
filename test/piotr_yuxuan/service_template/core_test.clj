@@ -4,14 +4,16 @@
    [malli.generator :as mg]
    [piotr-yuxuan.service-template.core :as core]
    [piotr-yuxuan.service-template.starling-api.entity :as entity]
-   [piotr-yuxuan.service-template.math :as math]
+   [piotr-yuxuan.service-template.math :as st.math]
    [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
    [reitit.ring.malli]
-   [piotr-yuxuan.service-template.math :as st.math]
    [piotr-yuxuan.service-template.db :as db])
   (:import
    (clojure.lang ExceptionInfo)
    (java.util UUID)))
+
+(def generative-test-attempts
+  35)
 
 (deftest select-matching-savings-goal-test
   (testing "one savings goal active and with this name"
@@ -51,16 +53,19 @@
 
 (deftest get-primary-account-test
   (testing "one primary account found"
-    (dotimes [_ 15]
+    (dotimes [_ generative-test-attempts]
       (let [[expected-account :as accounts] (->> (mg/generate [:sequential {:min 1 :max 1} entity/Account])
                                                  (map-indexed (fn [i acc] (assoc acc :accountType (if (zero? i) "PRIMARY" "FIXED_TERM_DEPOSIT")))))]
         (with-redefs [starling-api/get-accounts (constantly accounts)]
           (is (= expected-account (core/get-primary-account {} {})))))))
 
   (testing "multiple primary accounts, stable output"
-    (dotimes [_ 15]
+    (dotimes [_ generative-test-attempts]
       (let [accounts (->> (mg/generate [:sequential {:min 5} entity/Account])
-                          (map-indexed (fn [i acc] (assoc acc :accountType (if (odd? i) "PRIMARY" "FIXED_TERM_DEPOSIT")))))
+                          (map-indexed (fn [i acc] (assoc acc
+                                                          :accountType (if (odd? i) "PRIMARY" "FIXED_TERM_DEPOSIT")
+                                                          ;; This is to make the test robust, and non flaky.
+                                                          :createdAt i))))
             called? (atom 0)]
         (with-redefs [starling-api/get-accounts (fn [_ _] (swap! called? inc) (shuffle accounts))]
           (is (= (core/get-primary-account {} {})
@@ -91,7 +96,7 @@
         (is (= expected (core/resolve-savings-goal-uid {} {})))))))
 
 (deftest insufficient-funds?-test
-  (let [target-amount (mg/generate math/NonNegInt64)]
+  (let [target-amount (mg/generate st.math/NonNegInt64)]
     (with-redefs [starling-api/get-confirmation-of-funds
                   (fn [_ args]
                     (is (-> args :target-amount (= target-amount)))
@@ -118,7 +123,7 @@
       (is (false? (core/insufficient-funds? {} {} {:round-up-amount-in-minor-units target-amount}))))))
 
 (deftest resolve-round-up-amount-in-minor-units-test
-  (dotimes [_ 15]
+  (dotimes [_ generative-test-attempts]
     (testing "only consider outgoing transactions that have settled"
       (let [[x :as settled-transactions] (->> (mg/generate [:sequential {:min 1 :max 1} entity/FeedItem])
                                               (map #(assoc % :status "SETTLED" :direction "OUT")))]
