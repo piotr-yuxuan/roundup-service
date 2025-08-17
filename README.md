@@ -71,6 +71,13 @@ See instructions on the [container
 registry](https://github.com/piotr-yuxuan/starling-roundup-service/pkgs/container/starling-roundup-service)
 on how to authenticate.
 
+``` zsh
+VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
+
+echo $GITHUB_PAT | docker login ghcr.io -u piotr-yuxuan --password-stdin
+docker push ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION}
+```
+
 Start this service in a Docker container:
 
 ``` zsh
