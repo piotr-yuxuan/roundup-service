@@ -2,6 +2,7 @@
  :deps {;; Core language and utilities
         org.clojure/clojure {:mvn/version "1.12.1"} ; The language itself.
         babashka/process {:mvn/version "0.6.23"} ; Clojure wrapper for java.lang.ProcessBuilder
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
         ;; Web server and routing
         ring/ring {:mvn/version "1.14.2"} ; Core Ring abstraction for HTTP handling.
         ring/ring-jetty-adapter {:mvn/version "1.14.2"} ; Jetty server adapter for Ring.
