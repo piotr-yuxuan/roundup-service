@@ -431,6 +431,29 @@ $ bin/kaocha --watch
 In order to ignore the slower tests using testcontainers, add:
 `--skip-meta :test-containers`.
 
+### Build the Docker image
+
+``` zsh
+VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
+
+docker buildx build \
+  --build-arg VERSION=${VERSION} \
+  --build-context m2repo=$HOME/.m2/ \
+  --build-context git=./.git/ \
+  --tag ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION} \
+  --tag localhost/com.github.piotr-yuxuan.service-template:${VERSION} \
+  .
+```
+
+### Push a new version to the container registry
+
+``` zsh
+VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
+
+echo $GITHUB_PAT | docker login ghcr.io -u piotr-yuxuan --password-stdin
+docker push ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION}
+```
+
 ## Notes on the Starling API
 
 It is very pleasing to see such a complete, robust, and consistent API
