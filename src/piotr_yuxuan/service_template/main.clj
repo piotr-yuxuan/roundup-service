@@ -5,7 +5,6 @@
   displaying help or printing configuration."
   (:gen-class)
   (:require
-   [clojure.pprint :as pprint]
    [malli.core :as m]
    [malli.error :as me]
    [piotr-yuxuan.closeable-map :as closeable-map :refer [closeable-map*]]
@@ -15,7 +14,8 @@
    [piotr-yuxuan.service-template.db :as db]
    [piotr-yuxuan.service-template.logger :as logger]
    [piotr-yuxuan.service-template.secret :as secret]
-   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]))
+   [piotr-yuxuan.service-template.starling-api.ops :as starling-api]
+   [puget.printer :as puget]))
 
 (defn start
   "Initialise and start all service components (database, Starling API,
@@ -41,7 +41,7 @@
               (System/exit 1))
 
           (:show-config? config)
-          (do (pprint/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
+          (do (puget/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
               (System/exit 0))
 
           (:help config)

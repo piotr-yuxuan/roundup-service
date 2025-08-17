@@ -107,7 +107,7 @@ couple of observations that I'd be glad to fix on day 1 if allowed to
   =defaultCategory= of the =AccountV2= instances from
   =/api/v2/accounts=.
 
-## Getting started running this service
+## Getting started running this service in Docker
 
 - Run tests
 ``` zsh
@@ -139,9 +139,10 @@ touch ./log.json
 
 docker run \
     --network service-template_default \
-    -p 3000:3000 \
+    -t -p 3000:3000 \
     --volume "$PWD/log.json":/app/log.json:rw \
     localhost/com.github.piotr-yuxuan.service-template:$(cat resources/starling-roundup-service.version | tr -d '\n\r') \
+    --show-config \
     --db-hostname "postgres" \
     --db-migrate \
     --prometheus-push-url "http://pushgateway:9091" \
