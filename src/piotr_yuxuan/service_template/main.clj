@@ -41,7 +41,8 @@
               (System/exit 1))
 
           (:show-config? config)
-          (do (puget/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
+          (do (println "\nPrint loaded configuration, and then exit.\n")
+              (puget/pprint (m/encode Config config (malli-cli/secret-transformer {:secret-fn secret/->secret})))
               (System/exit 0))
 
           (:help config)
