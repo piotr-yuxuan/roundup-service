@@ -102,7 +102,7 @@ on how to authenticate.
 VERSION=$(cat resources/starling-roundup-service.version | tr -d '\n\r')
 
 echo $GITHUB_PAT | docker login ghcr.io -u piotr-yuxuan --password-stdin
-docker push ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION}
+docker pull ghcr.io/piotr-yuxuan/starling-roundup-service:${VERSION}
 ```
 
 Start this service in a Docker container:
