@@ -1,4 +1,4 @@
-# Starling round-up service
+# Round-up service
 
 A resilient and observable microservice, built in Clojure, that
 automates weekly savings by rounding up transactions and transferring
